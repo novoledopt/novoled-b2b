@@ -102,3 +102,39 @@ document.addEventListener('DOMContentLoaded', function () {
     treeContainer.parentNode.insertBefore(skeleton, treeContainer)
   }
 })
+
+// ─── КНОПКА РУЧНОГО ОБНОВЛЕНИЯ КАТАЛОГА ───
+document.addEventListener('DOMContentLoaded', function () {
+  var syncBtn = document.getElementById('sync-catalog-btn')
+  if (!syncBtn) return
+
+  syncBtn.addEventListener('click', async function () {
+    // Только для авторизованных
+    const email = sessionStorage.getItem('user_email')
+    if (!email) {
+      if (typeof showToast === 'function') showToast('Войдите в систему для обновления')
+      return
+    }
+
+    syncBtn.disabled = true
+    var icon = syncBtn.querySelector('svg')
+    if (icon) icon.style.animation = 'spin-icon 0.8s linear infinite'
+
+    try {
+      const count = await window.Novoled.api.syncFromSheet()
+      if (typeof showToast === 'function') showToast('✓ Каталог обновлён (' + count + ' товаров)')
+
+      // Перезагружаем каталог
+      if (window.Novoled.initCatalogPage) {
+        document.getElementById('catalog-tree').innerHTML = ''
+        await window.Novoled.initCatalogPage()
+      }
+    } catch (err) {
+      console.error('Sync error:', err)
+      if (typeof showToast === 'function') showToast('Ошибка обновления: ' + err.message)
+    } finally {
+      syncBtn.disabled = false
+      if (icon) icon.style.animation = ''
+    }
+  })
+})

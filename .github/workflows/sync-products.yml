@@ -7,9 +7,9 @@ name: Sync Products
 
 on:
   schedule:
-    - cron: '0 8 * * *'   # 08:00 UTC
-    - cron: '0 20 * * *'  # 20:00 UTC
-  workflow_dispatch:       # ручной запуск
+    - cron: '0 8 * * *'    # 08:00 UTC (11:00 Киев летом)
+    - cron: '0 20 * * *'   # 20:00 UTC (23:00 Киев летом)
+  workflow_dispatch:        # ручной запуск из интерфейса GitHub
 
 jobs:
   sync:
@@ -28,4 +28,4 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           SHEET_URL: ${{ secrets.SHEET_URL }}
-        run: node sync-server.js
+        run: node js/sync-server.js

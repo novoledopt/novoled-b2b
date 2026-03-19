@@ -35,8 +35,69 @@
     return data[0] || null
   }
 
+
+  // ─── РУЧНАЯ СИНХРОНИЗАЦИЯ (вызывается кнопкой на сайте) ───
+  // Читает Google Таблицу и пишет в Supabase через anon-ключ.
+  // Работает только если у пользователя есть can_see_prices (он авторизован).
+  // SERVICE_KEY здесь не нужен — используем RLS политику с anon ключом.
+  async function syncFromSheet() {
+    const SHEET_URL = 'https://opensheet.elk.sh/1CYwbHJ7yFGl_x6to4LLlSpPdQO2qpwzExS8whgrny8E/products'
+
+    function parseBoolean(value) {
+      if (value === true) return true
+      if (value === false) return false
+      if (!value) return false
+      const v = String(value).toLowerCase().trim()
+      return v === 'true' || v === '1' || v === 'yes' || v === 'да' || v === 'истина'
+    }
+
+    const res = await fetch(SHEET_URL)
+    if (!res.ok) throw new Error('Ошибка загрузки таблицы: ' + res.status)
+    const data = await res.json()
+    if (!Array.isArray(data)) throw new Error('Неверный формат ответа таблицы')
+
+    const products = data
+      .filter(p => p.id)
+      .map(p => ({
+        id:          p.id          || '',
+        in_stock:    parseBoolean(p.in_stock),
+        name:        p.name        || '',
+        category:    p.category    || '',
+        subcategory: p.subcategory || '',
+        series:      p.series      || '',
+        socket:      p.socket      || '',
+        power:       p.power       || '',
+        lumens:      p.lumens      || '',
+        unit:        p.unit        || '',
+        price:       p.price ? Number(p.price) : null,
+        image_1:     p.image_1     || '',
+        image_2:     p.image_2     || '',
+        image_3:     p.image_3     || '',
+      }))
+
+    // Пишем через Supabase REST API с anon ключом
+    // Требует RLS политику: allow anon INSERT/UPDATE ON products
+    const syncRes = await fetch(SUPABASE_URL + '/rest/v1/products', {
+      method: 'POST',
+      headers: {
+        'apikey':        SUPABASE_ANON_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+        'Content-Type':  'application/json',
+        'Prefer':        'resolution=merge-duplicates',
+      },
+      body: JSON.stringify(products),
+    })
+
+    if (!syncRes.ok) {
+      const text = await syncRes.text()
+      throw new Error('Supabase error ' + syncRes.status + ': ' + text)
+    }
+
+    return products.length
+  }
+
   window.Novoled = window.Novoled || {}
-  window.Novoled.api = { getAllProducts, getProductById }
+  window.Novoled.api = { getAllProducts, getProductById, syncFromSheet }
 })()
 
 // ;(function () {

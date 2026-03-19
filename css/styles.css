@@ -1749,3 +1749,17 @@ input:focus-visible {
   opacity: 1;
   transform: translateY(0);
 }
+/* ─── SYNC BUTTON SPIN ANIMATION ─── */
+@keyframes spin-icon {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+#sync-catalog-btn svg {
+  transition: transform 0.2s;
+}
+
+#sync-catalog-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

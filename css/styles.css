@@ -64,7 +64,7 @@ main { flex: 1; }
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 10px 0;
+  padding: 10px 16px;
 }
 
 /* Логотип — мобильный размер по умолчанию */
@@ -208,7 +208,7 @@ main { flex: 1; }
 /* ─── Шапка: планшет 480px+ ─── */
 @media (min-width: 480px) {
   .header-inner {
-    padding: 12px 0;
+    padding: 12px 16px;
     gap: 12px;
   }
   .logo-img {
@@ -241,7 +241,7 @@ main { flex: 1; }
 /* ─── Шапка: десктоп 768px+ ─── */
 @media (min-width: 768px) {
   .header-inner {
-    padding: 14px 0;
+    padding: 14px 16px;
     gap: 16px;
   }
   .logo-img {

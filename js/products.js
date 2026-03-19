@@ -29,9 +29,16 @@
   const COMING_SOON_IMG = 'images/products/coming-soon.png'
 
   function getProductImage(product) {
-    if (product.image_1) return product.image_1
-    if (product.image_2) return product.image_2
-    if (product.image_3) return product.image_3
+    function fixPath(p) {
+      if (!p) return ''
+      // Если путь уже полный — не трогаем
+      if (p.startsWith('http') || p.startsWith('images/')) return p
+      // Иначе добавляем папку
+      return 'images/products/' + p
+    }
+    if (product.image_1) return fixPath(product.image_1)
+    if (product.image_2) return fixPath(product.image_2)
+    if (product.image_3) return fixPath(product.image_3)
     return COMING_SOON_IMG
   }
 

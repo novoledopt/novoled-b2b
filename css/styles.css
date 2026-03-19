@@ -1472,3 +1472,90 @@ textarea:focus {
   flex: 1;
   min-width: 130px;
 }
+/* ─── FOOTER CONTACT ─── */
+.site-footer {
+  padding: 20px 0 22px;
+}
+
+.footer-inner {
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.footer-contact {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+}
+
+.footer-contact-role {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.footer-contact-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.footer-contact-link {
+  font-size: 12px;
+  color: var(--accent);
+  text-decoration: none;
+  transition: opacity var(--transition-fast);
+}
+
+.footer-contact-link:hover {
+  opacity: 0.75;
+}
+
+/* ─── SCROLL TO TOP ─── */
+.scroll-top-btn {
+  position: fixed;
+  bottom: 28px;
+  right: 24px;
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  background: rgba(11, 13, 19, 0.9);
+  border: 1px solid rgba(77, 242, 155, 0.35);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 100;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transform: translateY(12px);
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease,
+              background 0.18s, border-color 0.18s, box-shadow 0.18s;
+}
+
+.scroll-top-btn.visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.scroll-top-btn:hover {
+  background: rgba(77, 242, 155, 0.15);
+  border-color: rgba(77, 242, 155, 0.7);
+  box-shadow: 0 0 20px rgba(77, 242, 155, 0.3);
+}
+
+.scroll-top-btn:active {
+  transform: translateY(1px);
+}
+
+@media (max-width: 640px) {
+  .footer-contact { align-items: flex-start; text-align: left; }
+  .scroll-top-btn { bottom: 20px; right: 16px; width: 38px; height: 38px; }
+}

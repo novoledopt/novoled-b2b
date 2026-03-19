@@ -43,3 +43,21 @@
     })
   }
 })()
+
+// ─── SCROLL TO TOP ───
+document.addEventListener('DOMContentLoaded', function () {
+  var scrollBtn = document.getElementById('scroll-top-btn')
+  if (!scrollBtn) return
+
+  window.addEventListener('scroll', function () {
+    if (window.scrollY > 300) {
+      scrollBtn.classList.add('visible')
+    } else {
+      scrollBtn.classList.remove('visible')
+    }
+  }, { passive: true })
+
+  scrollBtn.addEventListener('click', function () {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  })
+})

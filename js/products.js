@@ -36,7 +36,7 @@
   }
 
   function normalizeBooleanStockLabel(inStock) {
-    return inStock ? 'ЕСТЬ В НАЛИЧИИ' : 'ОЖИДАЕТСЯ ПОСТАВКА'
+    return inStock ? 'В НАЛИЧИИ' : 'ОЖИДАЕТСЯ ПОСТАВКА'
   }
 
   // ─── СОЗДАНИЕ КАРТОЧКИ ───────────────────────────────────────────
@@ -53,7 +53,7 @@
     const imgSrc   = getProductImage(product)
     const stockLabel = normalizeBooleanStockLabel(!!product.in_stock)
     const canSeePrices = sessionStorage.getItem('can_see_prices') === 'true'
-    const priceStr = product.price ? Number(product.price).toFixed(2) + ' ₴' : '—'
+    const priceStr = product.price ? Number(product.price).toFixed(2) + ' ₽' : '—'
 
     card.innerHTML = `
       <div class="product-thumb">
@@ -415,7 +415,7 @@
     const mainImg = getProductImage(product)
     const stockLabel = normalizeBooleanStockLabel(!!product.in_stock)
     const canSeePrices = sessionStorage.getItem('can_see_prices') === 'true'
-    const priceStr = product.price ? Number(product.price).toFixed(2) + ' ₴' : '—'
+    const priceStr = product.price ? Number(product.price).toFixed(2) + ' ₽' : '—'
 
     body.innerHTML = `
       <div class="modal-product-layout">
@@ -512,7 +512,7 @@
       modalQty = Math.max(1, newQty)
       if (qtyValueEl) qtyValueEl.textContent = String(modalQty)
       if (totalEl && unitPrice) {
-        totalEl.textContent = (unitPrice * modalQty).toFixed(2) + ' ₴'
+        totalEl.textContent = (unitPrice * modalQty).toFixed(2) + ' ₽'
       }
     }
 

@@ -41,6 +41,7 @@
       justify-content: center;
       font-weight: 700;
       font-size: 18px;
+      color: #ffffff;
       box-shadow: 0 0 24px rgba(77,242,155,0.55);
     }
     .login-logo .logo-text {
@@ -114,11 +115,40 @@
       margin: 0 auto;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    .login-close {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      width: 32px;
+      height: 32px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 18px;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.18s, color 0.18s, background 0.18s;
+      text-decoration: none;
+    }
+    .login-close:hover {
+      border-color: rgba(255,255,255,0.3);
+      color: var(--text);
+      background: rgba(255,255,255,0.06);
+    }
+    .login-card {
+      position: relative;
+    }
   </style>
 </head>
 <body>
   <div class="login-page">
     <div class="login-card">
+      <a href="index.html" class="login-close" title="На главную" aria-label="Закрыть">&#x2715;</a>
       <a href="index.html" class="login-logo">
         <span class="logo-mark">N</span>
         <span class="logo-text">NOVOLed</span>
@@ -170,7 +200,7 @@
 
       errorEl.style.display = 'none'
       if (!email || !password) {
-        errorEl.textContent = 'Введіть email та пароль'
+        errorEl.textContent = 'Введите email и пароль'
         errorEl.style.display = 'block'
         return
       }

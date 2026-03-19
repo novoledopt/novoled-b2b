@@ -192,7 +192,7 @@
     const resultEl = document.getElementById('request-result')
     if (!form || !resultEl) return
 
-    form.addEventListener('submit', function(e) {
+    form.addEventListener('submit', async function(e) {
       e.preventDefault()
       const data = new FormData(form)
       const totals = getCartTotals()
@@ -205,32 +205,52 @@
         return
       }
 
-      const summaryLines = items.map(function(i) {
-        return i.name + ' (' + (i.socket || '') + ') — ' + i.qty + ' ' +
-          (i.unit || 'ед.') + ' × ' + Number(i.price || 0).toFixed(2) +
-          ' = ' + (i.qty * (Number(i.price) || 0)).toFixed(2)
-      })
+      // Формируем строку с товарами для колонки "Товары"
+      const itemsText = items.map(function(i) {
+        return i.name + ' x' + i.qty + (i.price ? ' (' + (i.qty * Number(i.price)).toFixed(2) + ' ₽)' : '')
+      }).join('; ')
 
-      const msg = [
-        'Компания: ' + data.get('company'),
-        'Контактное лицо: ' + data.get('name'),
-        'Телефон: ' + data.get('phone'),
-        'Электронная почта: ' + data.get('email'),
-        '',
-        'Заказ:',
-      ].concat(summaryLines).concat([
-        '',
-        'Всего позиций: ' + totalItems,
-        'Сумма: ' + totalSum.toFixed(2) + ' ₽',
-        '',
-        'Комментарий: ' + (data.get('comment') || '-'),
-      ]).join('\n')
+      // Данные заказа для Google Таблицы
+      const orderRow = {
+        date:      new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Kiev' }),
+        company:   data.get('company') || '',
+        name:      data.get('name')    || '',
+        phone:     data.get('phone')   || '',
+        email:     data.get('email')   || '',
+        items:     itemsText,
+        total:     totalSum.toFixed(2) + ' ₽',
+        comment:   data.get('comment') || '',
+        status:    'Новый',
+      }
 
-      console.log('B2B request:\n', msg)
-      resultEl.textContent = 'Запрос сформирован. Данные выведены в console.log — подключите свой email/CRM‑бекенд.'
-      form.reset()
-      clearCart()
-      renderCartPage()
+      // Отправляем в Google Apps Script
+      const ORDERS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw3HIoHc1d8pR0x7h58L8xvEGofchb_tS6ian7hxRpoZJ9UxHRrbhLvxMcu5HLdV6xE/exec'
+
+      const submitBtn = form.querySelector('[type="submit"]')
+      if (submitBtn) submitBtn.disabled = true
+      resultEl.textContent = 'Отправляем заказ...'
+      resultEl.style.color = 'var(--text-muted)'
+
+      try {
+        const res = await fetch(ORDERS_SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderRow),
+        })
+        // no-cors не даёт читать ответ, но если нет ошибки — считаем успехом
+        resultEl.textContent = '✓ Заказ отправлен! Мы свяжемся с вами для подтверждения.'
+        resultEl.style.color = 'var(--accent)'
+        form.reset()
+        clearCart()
+        renderCartPage()
+      } catch (err) {
+        console.error('Ошибка отправки заказа:', err)
+        resultEl.textContent = 'Ошибка отправки. Пожалуйста, свяжитесь с нами напрямую.'
+        resultEl.style.color = 'var(--danger)'
+      } finally {
+        if (submitBtn) submitBtn.disabled = false
+      }
     })
   }
 

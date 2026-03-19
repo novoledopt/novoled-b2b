@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="uk">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <title>Корзина · NOVOLed</title>
+    <link rel="stylesheet" href="css/styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/auth.js"></script>
+  </head>
+  <body data-page="cart">
+    <header class="site-header">
+      <div class="container header-inner">
+        <a href="index.html" class="logo">
+          <span class="logo-mark">N</span>
+          <span class="logo-text">NOVOLed</span>
+        </a>
+        <nav class="main-nav">
+          <a href="index.html" class="nav-link">Каталог</a>
+          <a href="cart.html" class="nav-link nav-link-active">
+            Корзина
+            <span id="cart-count-badge" class="cart-count-badge">0</span>
+          </a>
+          <div id="header-auth" class="header-auth-area">
+            <a href="login.html" class="auth-login-link">Войти</a>
+          </div>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="cart-section">
+        <div class="container">
+          <h1>Корзина</h1>
+          <p class="muted">Корзина используется как предварительный заказ / запрос счета.</p>
+
+          <div id="cart-empty" class="empty-state" hidden>
+            Корзина пуста. Добавьте товары из каталога.
+          </div>
+
+          <div id="cart-table-wrapper" class="cart-table-wrapper" hidden>
+            <table class="cart-table">
+              <thead>
+                <tr>
+                  <th>Товары</th>
+                  <th>Цоколь</th>
+                  <th>Количество</th>
+                  <th>Цена, ₽</th>
+                  <th>Сумма, ₽</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="cart-items"></tbody>
+            </table>
+
+            <div class="cart-summary">
+              <div>
+                <div class="cart-summary-row">
+                  <span>Всего позицийй</span>
+                  <span id="cart-items-count">0</span>
+                </div>
+                <div class="cart-summary-row">
+                  <span>Общая сумма</span>
+                  <span id="cart-total">0 ₽</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <section class="cart-request">
+            <h2>Выслать запрос</h2>
+            <p class="muted">Заполните данные и мы свяжемся с вами для обсуждения деталей заказа</p>
+
+            <form id="request-form" class="request-form">
+              <div class="form-row">
+                <label>
+                  Название компании
+                  <input type="text" name="company" required />
+                </label>
+                <label>
+                  Контактное лицо
+                  <input type="text" name="name" required />
+                </label>
+              </div>
+              <div class="form-row">
+                <label>
+                  Телефонный номер
+                  <input type="tel" name="phone" required />
+                </label>
+                <label>
+                  Электронная почта
+                  <input type="email" name="email" required />
+                </label>
+              </div>
+              <label>
+                Комментарий
+                <textarea name="comment" rows="3" placeholder="Комментарий..."></textarea>
+              </label>
+              <button type="submit" class="btn-primary">Сформировать запрос (без оплаты)</button>
+              <div id="request-result" class="muted"></div>
+            </form>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <span>© <span id="year"></span> NOVOLed</span>
+        <span class="muted">Каталог для опатовых клиентов</span>
+      </div>
+    </footer>
+
+    <script src="js/cart.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/products.js"></script>
+    <script src="js/app.js"></script>
+  </body>
+</html>

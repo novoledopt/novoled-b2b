@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="uk">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <title>NOVOLed - Каталог автосвета</title>
+    <meta name="description" content="Каталог автосвета NOVOLed — оптовые цены, актуальные остатки, быстрое оформление заказа." />
+    <link rel="stylesheet" href="css/styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/auth.js"></script>
+  </head>
+  <body data-page="catalog">
+    <header class="site-header">
+      <div class="container header-inner">
+        <a href="index.html" class="logo">
+          <span class="logo-mark">N</span>
+          <span class="logo-text">NOVOLed</span>
+        </a>
+        <nav class="main-nav">
+          <a href="index.html" class="nav-link nav-link-active">Каталог</a>
+          <a href="cart.html" class="nav-link">
+            Корзина
+            <span id="cart-count-badge" class="cart-count-badge">0</span>
+          </a>
+          <div id="header-auth" class="header-auth-area">
+            <!-- заполняется через updateHeaderAuth() -->
+            <a href="login.html" class="auth-login-link">Войти</a>
+          </div>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-bg"></div>
+        <div class="hero-glow"></div>
+        <div class="hero-light"></div>
+        <div class="container hero-inner hero-inner-single">
+          <div class="hero-copy">
+            <h1>NOVOLED — современный автосвет</h1>
+            <p>LED-лампы, линзы, противотуманные фары и комплектующие для яркого и безопасного освещения автомобиля.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="filters-section">
+        <div class="container">
+          <div class="hero-actions hero-actions-below">
+            <div class="hero-search">
+              <input type="search" id="search-input" placeholder="Поиск по названию, категории, цоколю…" autocomplete="off" />
+            </div>
+          </div>
+          <div class="filters-bar">
+            <div class="filters-group">
+              <div class="filters-title">Серия</div>
+              <div id="series-filter-list" class="filter-chips"></div>
+            </div>
+            <div class="filters-group">
+              <div class="filters-title">Цоколь</div>
+              <div id="socket-filter-list" class="filter-chips"></div>
+            </div>
+            <button id="reset-filters" class="btn-secondary filters-reset">Сбросить фильтры</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="products-section">
+        <div class="container">
+          <div class="section-header">
+            <h2>Каталог товаров</h2>
+            <span id="products-count" class="muted"></span>
+          </div>
+          <div id="products-loader" class="loader">Загрузка каталога…</div>
+          <div id="products-error" class="error-message" hidden></div>
+          <div id="catalog-tree"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <span>© <span id="year"></span> NOVOLed</span>
+        <span class="muted">Каталог для оптовых клиентов</span>
+      </div>
+    </footer>
+
+    <div id="product-modal" class="modal" hidden>
+      <div class="modal-backdrop" data-modal-close></div>
+      <div class="modal-dialog">
+        <button type="button" class="modal-close" id="product-modal-close" data-modal-close>×</button>
+        <div id="product-modal-body" class="modal-body"></div>
+      </div>
+    </div>
+
+    <script src="js/cart.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/products.js"></script>
+    <script src="js/app.js"></script>
+  </body>
+</html>

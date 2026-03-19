@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>Вхід · NOVOLed</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/auth.js"></script>
+  <style>
+    .login-page {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }
+    .login-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 40px 36px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: var(--shadow-soft);
+    }
+    .login-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 32px;
+      text-decoration: none;
+    }
+    .login-logo .logo-mark {
+      width: 32px;
+      height: 32px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 20% 0%, #4df29b, #0f151e 58%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 18px;
+      box-shadow: 0 0 24px rgba(77,242,155,0.55);
+    }
+    .login-logo .logo-text {
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+    .login-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin: 0 0 6px;
+      color: var(--text);
+    }
+    .login-subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin: 0 0 28px;
+    }
+    .login-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+    .login-field label {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .login-field input {
+      background: var(--bg-soft);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 15px;
+      padding: 10px 14px;
+      outline: none;
+      transition: border-color var(--transition-fast);
+      width: 100%;
+    }
+    .login-field input:focus {
+      border-color: var(--accent);
+    }
+    .login-btn {
+      width: 100%;
+      margin-top: 8px;
+      padding: 12px;
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .login-error {
+      background: rgba(255, 92, 92, 0.1);
+      border: 1px solid rgba(255, 92, 92, 0.3);
+      border-radius: var(--radius-sm);
+      color: var(--danger);
+      font-size: 13px;
+      padding: 10px 14px;
+      margin-top: 12px;
+      display: none;
+    }
+    .login-spinner {
+      display: none;
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 0 auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="login-page">
+    <div class="login-card">
+      <a href="index.html" class="login-logo">
+        <span class="logo-mark">N</span>
+        <span class="logo-text">NOVOLed</span>
+      </a>
+      <h1 class="login-title">Вход в каталог</h1>
+      <p class="login-subtitle">Введите email и пароль для доступа</p>
+
+      <div class="login-field">
+        <label for="login-email">Email</label>
+        <input type="email" id="login-email" placeholder="shop@example.com" autocomplete="email" required />
+      </div>
+      <div class="login-field">
+        <label for="login-password">Пароль</label>
+        <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password" required />
+      </div>
+
+      <button class="btn-primary login-btn" id="login-btn" type="button">
+        <span id="login-btn-text">Войти</span>
+        <span class="login-spinner" id="login-spinner"></span>
+      </button>
+
+      <div class="login-error" id="login-error"></div>
+    </div>
+  </div>
+
+  <script>
+    // Если уже авторизован — сразу на каталог
+    ;(async function() {
+      const user = await getCurrentUser()
+      if (user) {
+        window.location.href = 'index.html'
+      }
+    })()
+
+    const btn = document.getElementById('login-btn')
+    const btnText = document.getElementById('login-btn-text')
+    const spinner = document.getElementById('login-spinner')
+    const errorEl = document.getElementById('login-error')
+
+    function setLoading(on) {
+      btn.disabled = on
+      btnText.style.display = on ? 'none' : ''
+      spinner.style.display = on ? 'block' : 'none'
+    }
+
+    async function doLogin() {
+      const email = document.getElementById('login-email').value.trim()
+      const password = document.getElementById('login-password').value
+
+      errorEl.style.display = 'none'
+      if (!email || !password) {
+        errorEl.textContent = 'Введіть email та пароль'
+        errorEl.style.display = 'block'
+        return
+      }
+
+      setLoading(true)
+      const result = await login(email, password)
+      setLoading(false)
+
+      if (result.success) {
+        window.location.href = 'index.html'
+      } else {
+        errorEl.textContent = result.message
+        errorEl.style.display = 'block'
+      }
+    }
+
+    btn.addEventListener('click', doLogin)
+
+    // Логин по Enter
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') doLogin()
+    })
+  </script>
+</body>
+</html>

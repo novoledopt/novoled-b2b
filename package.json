@@ -1,0 +1,16 @@
+{
+  "name": "files",
+  "version": "1.0.0",
+  "description": "Статичний B2B‑каталог автосвітла на **HTML + CSS + Vanilla JS** з бекендом на **Supabase** та синхронізацією товарів із **Google Sheet** (через `opensheet.elk.sh`).",
+  "main": "sync-sheet-to-supabase.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Sergey_Novikov <njersdesign@gmail.com>",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  }
+}

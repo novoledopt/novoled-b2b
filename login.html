@@ -25,31 +25,14 @@
       box-shadow: var(--shadow-soft);
     }
     .login-logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 32px;
+      display: block;
+      margin-bottom: 28px;
       text-decoration: none;
     }
-    .login-logo .logo-mark {
-      width: 32px;
+    .login-logo-img {
       height: 32px;
-      border-radius: 999px;
-      background: radial-gradient(circle at 20% 0%, #4df29b, #0f151e 58%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 18px;
-      color: #ffffff;
-      box-shadow: 0 0 24px rgba(77,242,155,0.55);
-    }
-    .login-logo .logo-text {
-      font-weight: 700;
-      font-size: 16px;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: var(--text);
+      width: auto;
+      display: block;
     }
     .login-title {
       font-size: 22px;
@@ -150,8 +133,7 @@
     <div class="login-card">
       <a href="index.html" class="login-close" title="На главную" aria-label="Закрыть">&#x2715;</a>
       <a href="index.html" class="login-logo">
-        <span class="logo-mark">N</span>
-        <span class="logo-text">NOVOLed</span>
+        <img src="images/logo.svg" alt="NOVOLed" class="login-logo-img" />
       </a>
       <h1 class="login-title">Вход в каталог</h1>
       <p class="login-subtitle">Введите email и пароль для доступа</p>

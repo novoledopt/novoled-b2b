@@ -28,17 +28,16 @@
 
   const COMING_SOON_IMG = 'images/products/coming-soon.png'
 
+  function fixImagePath(p) {
+    if (!p) return ''
+    if (p.startsWith('http') || p.startsWith('images/')) return p
+    return 'images/products/' + p
+  }
+
   function getProductImage(product) {
-    function fixPath(p) {
-      if (!p) return ''
-      // Если путь уже полный — не трогаем
-      if (p.startsWith('http') || p.startsWith('images/')) return p
-      // Иначе добавляем папку
-      return 'images/products/' + p
-    }
-    if (product.image_1) return fixPath(product.image_1)
-    if (product.image_2) return fixPath(product.image_2)
-    if (product.image_3) return fixPath(product.image_3)
+    if (product.image_1) return fixImagePath(product.image_1)
+    if (product.image_2) return fixImagePath(product.image_2)
+    if (product.image_3) return fixImagePath(product.image_3)
     return COMING_SOON_IMG
   }
 
@@ -425,7 +424,7 @@
     const body  = document.getElementById('product-modal-body')
     if (!modal || !body) return
 
-    const images = [product.image_1, product.image_2, product.image_3].filter(Boolean)
+    const images = [product.image_1, product.image_2, product.image_3].filter(Boolean).map(fixImagePath)
     const mainImg = getProductImage(product)
     const stockLabel = normalizeBooleanStockLabel(!!product.in_stock)
     const canSeePrices = sessionStorage.getItem('can_see_prices') === 'true'

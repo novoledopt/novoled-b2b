@@ -611,7 +611,7 @@ select {
 .product-thumb {
   width: 100%;
   aspect-ratio: 4 / 3;
-  background: radial-gradient(circle at 50% 30%, #151c2e, #05060b);
+  background: #ffffff;
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -1174,7 +1174,7 @@ textarea:focus {
 
 .modal-main-image {
   border-radius: 14px;
-  background: radial-gradient(circle at top left, #202842, #05060a);
+  background: #ffffff;
   aspect-ratio: 4 / 3;
   display: flex;
   align-items: center;
@@ -1196,15 +1196,15 @@ textarea:focus {
 .modal-thumb {
   flex: 1 1 0;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: #070812;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: #ffffff;
   aspect-ratio: 4 / 3;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   cursor: pointer;
-  opacity: 0.7;
+  opacity: 0.75;
 }
 
 .modal-thumb-active {

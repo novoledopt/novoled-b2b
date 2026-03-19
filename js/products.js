@@ -119,6 +119,8 @@
         addBtn.classList.remove('btn-pulse')
         void addBtn.offsetWidth
         addBtn.classList.add('btn-pulse')
+        // Toast уведомление
+        if (typeof showToast === 'function') showToast('Добавлено в корзину')
       })
     }
 
@@ -323,8 +325,13 @@
       const data = await window.Novoled.api.getAllProducts()
       products = data.map(normalizeProduct)
       loader.style.display = 'none'
+      // Убираем skeleton если был показан
+      const skeleton = document.getElementById('catalog-skeleton')
+      if (skeleton) skeleton.remove()
     } catch (err) {
       loader.style.display = 'none'
+      const skeleton = document.getElementById('catalog-skeleton')
+      if (skeleton) skeleton.remove()
       if (errorEl) {
         errorEl.hidden = false
         errorEl.textContent = 'Не удалось загрузить каталог из Supabase. Проверьте таблицу products и CORS.'

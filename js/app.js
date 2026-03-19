@@ -61,3 +61,44 @@ document.addEventListener('DOMContentLoaded', function () {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   })
 })
+// ─── TOAST УВЕДОМЛЕНИЕ ───
+function showToast(msg) {
+  var existing = document.getElementById('novoled-toast')
+  if (existing) existing.remove()
+
+  var toast = document.createElement('div')
+  toast.id = 'novoled-toast'
+  toast.className = 'toast'
+  toast.textContent = msg
+  document.body.appendChild(toast)
+
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      toast.classList.add('show')
+    })
+  })
+
+  setTimeout(function() {
+    toast.classList.remove('show')
+    setTimeout(function() { toast.remove() }, 220)
+  }, 2000)
+}
+
+// ─── SKELETON LOADER ───
+document.addEventListener('DOMContentLoaded', function () {
+  var treeContainer = document.getElementById('catalog-tree')
+  var loader = document.getElementById('products-loader')
+  if (treeContainer && loader) {
+    // Прячем текстовый лоадер, показываем skeleton карточки
+    loader.style.display = 'none'
+    var skeleton = document.createElement('div')
+    skeleton.id = 'catalog-skeleton'
+    skeleton.className = 'skeleton-grid'
+    for (var i = 0; i < 8; i++) {
+      var card = document.createElement('div')
+      card.className = 'skeleton-card'
+      skeleton.appendChild(card)
+    }
+    treeContainer.parentNode.insertBefore(skeleton, treeContainer)
+  }
+})

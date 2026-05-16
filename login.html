@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Вход · НОВОЛЕД</title>
   <link rel="stylesheet" href="css/styles.css" />
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/auth.js"></script>
   <style>
     .login-page {
@@ -23,6 +22,7 @@
       width: 100%;
       max-width: 400px;
       box-shadow: var(--shadow-soft);
+      position: relative;
     }
     .login-logo {
       display: block;
@@ -98,7 +98,6 @@
       margin: 0 auto;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-
     .login-close {
       position: absolute;
       top: 14px;
@@ -123,8 +122,12 @@
       color: var(--text);
       background: rgba(255,255,255,0.06);
     }
-    .login-card {
-      position: relative;
+    .login-hint {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 14px;
+      text-align: center;
+      line-height: 1.5;
     }
   </style>
 </head>
@@ -136,15 +139,11 @@
         <img src="images/logo.svg" alt="NOVOLed" class="login-logo-img" />
       </a>
       <h1 class="login-title">Вход в каталог</h1>
-      <p class="login-subtitle">Введите email и пароль для доступа</p>
+      <p class="login-subtitle">Введите email, зарегистрированный менеджером</p>
 
       <div class="login-field">
         <label for="login-email">Email</label>
         <input type="email" id="login-email" placeholder="shop@example.com" autocomplete="email" required />
-      </div>
-      <div class="login-field">
-        <label for="login-password">Пароль</label>
-        <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password" required />
       </div>
 
       <button class="btn-primary login-btn" id="login-btn" type="button">
@@ -153,19 +152,20 @@
       </button>
 
       <div class="login-error" id="login-error"></div>
+      <p class="login-hint">Нет доступа? Обратитесь к менеджеру:<br>
+        <a href="mailto:novoledopt@gmail.com" style="color:var(--accent)">novoledopt@gmail.com</a>
+      </p>
     </div>
   </div>
 
   <script>
     // Если уже авторизован — сразу на каталог
-    ;(async function() {
-      const user = await getCurrentUser()
-      if (user) {
-        window.location.href = 'index.html'
-      }
+    ;(function() {
+      const user = getCurrentUser()
+      if (user) window.location.href = 'index.html'
     })()
 
-    const btn = document.getElementById('login-btn')
+    const btn     = document.getElementById('login-btn')
     const btnText = document.getElementById('login-btn-text')
     const spinner = document.getElementById('login-spinner')
     const errorEl = document.getElementById('login-error')
@@ -178,17 +178,16 @@
 
     async function doLogin() {
       const email = document.getElementById('login-email').value.trim()
-      const password = document.getElementById('login-password').value
-
       errorEl.style.display = 'none'
-      if (!email || !password) {
-        errorEl.textContent = 'Введите email и пароль'
+
+      if (!email) {
+        errorEl.textContent = 'Введите email'
         errorEl.style.display = 'block'
         return
       }
 
       setLoading(true)
-      const result = await login(email, password)
+      const result = await login(email)
       setLoading(false)
 
       if (result.success) {
@@ -200,8 +199,6 @@
     }
 
     btn.addEventListener('click', doLogin)
-
-    // Логин по Enter
     document.addEventListener('keydown', function(e) {
       if (e.key === 'Enter') doLogin()
     })

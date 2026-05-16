@@ -1,31 +1,32 @@
 # ─────────────────────────────────────────────────────────────────
-#  NOVOLed — автосинхронизация Google Таблицы → Supabase
-#  Запускается: автоматически 2 раза в сутки (8:00 и 20:00 UTC)
-#              + вручную через Actions → Run workflow
+#  NOVOLed — автоматическое обновление каталога
+#  Запускается: каждые 2 часа автоматически + вручную через Actions
+#
+#  Что делает: коммитит пустой файл .last-sync с временной меткой,
+#  что триггерит Vercel на пересборку и очищает CDN-кэш.
+#  Сами данные хранятся в Google Таблице и читаются через Apps Script.
 # ─────────────────────────────────────────────────────────────────
-name: Sync Products
+name: Auto Refresh Catalog
 
 on:
   schedule:
-    - cron: '0 8 * * *'    # 08:00 UTC (11:00 Киев летом)
-    - cron: '0 20 * * *'   # 20:00 UTC (23:00 Киев летом)
-  workflow_dispatch:        # ручной запуск из интерфейса GitHub
+    - cron: '0 */2 * * *'   # каждые 2 часа
+  workflow_dispatch:          # ручной запуск из GitHub Actions
 
 jobs:
-  sync:
+  refresh:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run sync
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          SHEET_URL: ${{ secrets.SHEET_URL }}
-        run: node js/sync-server.js
+      - name: Bump sync timestamp
+        run: |
+          echo "Last sync: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" > .last-sync
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .last-sync
+          git diff --staged --quiet || git commit -m "chore: catalog refresh $(date -u '+%Y-%m-%d %H:%M')"
+          git push

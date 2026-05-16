@@ -1,160 +1,102 @@
 ;(function () {
-  const SUPABASE_URL = 'https://kvycffsvgfftxzoqrrlj.supabase.co'
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2eWNmZnN2Z2ZmdHh6b3FycmxqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzNDg4NzcsImV4cCI6MjA4ODkyNDg3N30.rNCbdcooMjp2ibIygT_uQMt10DwyA_pKCQ3kqEs04hk'
+  // ─── ЗАМЕНИТЕ НА ВАШ РЕАЛЬНЫЙ URL APPS SCRIPT ───────────────────
+  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxU9BXOdmvpoyTNXtjgwiLR9q2IA5AKTBzLcp66EuvGQmVxnYgboa7hn5AP1YzeSXFo/exec'
+  // ─────────────────────────────────────────────────────────────────
 
-  async function fetchJson(url) {
-    const res = await fetch(url, {
-      headers: {
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
-      },
-    })
-    if (!res.ok) {
-      const text = await res.text()
-      throw new Error('Ошибка запроса (' + res.status + '): ' + text)
-    }
+  // Кэш в памяти (для текущей вкладки — мгновенно)
+  let _memCache = null
+  let _memTime  = 0
+
+  // Кэш в localStorage (между страницами и перезагрузками)
+  const LS_KEY     = 'novoled_products_cache'
+  const LS_TTL_KEY = 'novoled_products_cache_time'
+  const TTL_MS     = 30 * 60 * 1000   // 30 минут — данные актуальны
+  const STALE_MS   = 4 * 60 * 60 * 1000 // 4 часа — жёсткий сброс
+
+  function readLsCache() {
+    try {
+      const t = Number(localStorage.getItem(LS_TTL_KEY) || 0)
+      if (!t || Date.now() - t > STALE_MS) return null
+      const raw = localStorage.getItem(LS_KEY)
+      if (!raw) return null
+      return { products: JSON.parse(raw), time: t }
+    } catch { return null }
+  }
+
+  function writeLsCache(products) {
+    try {
+      const t = Date.now()
+      localStorage.setItem(LS_KEY,     JSON.stringify(products))
+      localStorage.setItem(LS_TTL_KEY, String(t))
+    } catch { /* localStorage переполнен — игнорируем */ }
+  }
+
+  function clearLsCache() {
+    localStorage.removeItem(LS_KEY)
+    localStorage.removeItem(LS_TTL_KEY)
+  }
+
+  async function callScript(params) {
+    const url = new URL(APPS_SCRIPT_URL)
+    Object.entries(params).forEach(function(kv) { url.searchParams.set(kv[0], kv[1]) })
+    const res = await fetch(url.toString())
+    if (!res.ok) throw new Error('Ошибка Apps Script: ' + res.status)
     return res.json()
   }
 
   async function getAllProducts() {
-    const canSeePrices = sessionStorage.getItem('can_see_prices') === 'true'
+    const now = Date.now()
 
-    // Если у пользователя есть доступ к ценам — берём из таблицы products (с price)
-    // Если нет — берём из products_public (без price)
-    const table = canSeePrices ? 'products' : 'products_public'
-    const url = SUPABASE_URL + '/rest/v1/' + table + '?select=*'
+    // 1. Память — мгновенно (в рамках одной вкладки)
+    if (_memCache && now - _memTime < TTL_MS) {
+      return _memCache
+    }
 
-    return fetchJson(url)
+    // 2. localStorage — мгновенно (между страницами)
+    const ls = readLsCache()
+    if (ls && now - ls.time < TTL_MS) {
+      _memCache = ls.products
+      _memTime  = ls.time
+
+      // Тихое фоновое обновление если данным больше 15 мин
+      if (now - ls.time > 15 * 60 * 1000) {
+        _fetchAndStore().catch(function() {})
+      }
+
+      return _memCache
+    }
+
+    // 3. Сеть — идём к Apps Script
+    return _fetchAndStore()
+  }
+
+  async function _fetchAndStore() {
+    const email = (typeof getUserEmail === 'function') ? getUserEmail() : ''
+    const data  = await callScript({ action: 'getProducts', email: email })
+    if (data.error) throw new Error(data.error)
+    const products = data.products || []
+    _memCache = products
+    _memTime  = Date.now()
+    writeLsCache(products)
+    return products
   }
 
   async function getProductById(id) {
-    const canSeePrices = sessionStorage.getItem('can_see_prices') === 'true'
-    const table = canSeePrices ? 'products' : 'products_public'
-    const url = SUPABASE_URL + '/rest/v1/' + table + '?id=eq.' + encodeURIComponent(id) + '&select=*'
-    const data = await fetchJson(url)
-    return data[0] || null
+    const products = await getAllProducts()
+    return products.find(function(p) { return String(p.id) === String(id) }) || null
   }
 
+  function clearCache() {
+    _memCache = null
+    _memTime  = 0
+    clearLsCache()
+  }
 
-  // ─── РУЧНАЯ СИНХРОНИЗАЦИЯ (вызывается кнопкой на сайте) ───
-  // Читает Google Таблицу и пишет в Supabase через anon-ключ.
-  // Работает только если у пользователя есть can_see_prices (он авторизован).
-  // SERVICE_KEY здесь не нужен — используем RLS политику с anon ключом.
   async function syncFromSheet() {
-    const SHEET_URL = 'https://opensheet.elk.sh/1CYwbHJ7yFGl_x6to4LLlSpPdQO2qpwzExS8whgrny8E/products'
-
-    function parseBoolean(value) {
-      if (value === true) return true
-      if (value === false) return false
-      if (!value) return false
-      const v = String(value).toLowerCase().trim()
-      return v === 'true' || v === '1' || v === 'yes' || v === 'да' || v === 'истина'
-    }
-
-    const res = await fetch(SHEET_URL)
-    if (!res.ok) throw new Error('Ошибка загрузки таблицы: ' + res.status)
-    const data = await res.json()
-    if (!Array.isArray(data)) throw new Error('Неверный формат ответа таблицы')
-
-    const products = data
-      .filter(p => p.id)
-      .map(p => ({
-        id:          p.id          || '',
-        in_stock:    parseBoolean(p.in_stock),
-        name:        p.name        || '',
-        category:    p.category    || '',
-        subcategory: p.subcategory || '',
-        series:      p.series      || '',
-        socket:      p.socket      || '',
-        power:       p.power       || '',
-        lumens:      p.lumens      || '',
-        unit:        p.unit        || '',
-        price:       p.price ? Number(p.price) : null,
-        image_1:     p.image_1     || '',
-        image_2:     p.image_2     || '',
-        image_3:     p.image_3     || '',
-      }))
-
-    // Пишем через Supabase REST API с anon ключом
-    // Требует RLS политику: allow anon INSERT/UPDATE ON products
-    const syncRes = await fetch(SUPABASE_URL + '/rest/v1/products', {
-      method: 'POST',
-      headers: {
-        'apikey':        SUPABASE_ANON_KEY,
-        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-        'Content-Type':  'application/json',
-        'Prefer':        'resolution=merge-duplicates',
-      },
-      body: JSON.stringify(products),
-    })
-
-    if (!syncRes.ok) {
-      const text = await syncRes.text()
-      throw new Error('Supabase error ' + syncRes.status + ': ' + text)
-    }
-
-    return products.length
+    clearCache()
+    return _fetchAndStore()
   }
 
   window.Novoled = window.Novoled || {}
-  window.Novoled.api = { getAllProducts, getProductById, syncFromSheet }
+  window.Novoled.api = { getAllProducts, getProductById, syncFromSheet, clearCache }
 })()
-
-// ;(function () {
-//   const SUPABASE_URL =
-//     'https://kvycffsvgfftxzoqrrlj.supabase.co'
-
-//   const SUPABASE_ANON_KEY =
-//     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2eWNmZnN2Z2ZmdHh6b3FycmxqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzNDg4NzcsImV4cCI6MjA4ODkyNDg3N30.rNCbdcooMjp2ibIygT_uQMt10DwyA_pKCQ3kqEs04hk'
-
-//   const productsEndpoint =
-//     `${SUPABASE_URL}/rest/v1/products_public`
-
-//   async function fetchJson(url, config) {
-//     const res = await fetch(url, config)
-
-//     if (!res.ok) {
-//       const text = await res.text()
-
-//       throw new Error(
-//         `Ошибка запроса (${res.status}): ${text || res.statusText}`
-//       )
-//     }
-
-//     return res.json()
-//   }
-
-//   async function getAllProducts() {
-//     const url = `${productsEndpoint}?select=*`
-
-//     return fetchJson(url, {
-//       headers: {
-//         apikey: SUPABASE_ANON_KEY,
-//         Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-//       },
-//     })
-//   }
-
-//   async function getProductById(id) {
-//     const url =
-//       `${productsEndpoint}?id=eq.${encodeURIComponent(
-//         id
-//       )}&select=*`
-
-//     const data = await fetchJson(url, {
-//       headers: {
-//         apikey: SUPABASE_ANON_KEY,
-//         Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-//       },
-//     })
-
-//     return data[0] || null
-//   }
-
-//   window.Novoled = window.Novoled || {}
-
-//   window.Novoled.api = {
-//     getAllProducts,
-//     getProductById,
-//   }
-// })()

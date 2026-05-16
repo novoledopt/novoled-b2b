@@ -9,7 +9,7 @@
 
   if (window.Novoled.initCartBadge) window.Novoled.initCartBadge()
 
-  // Ждём пока auth загрузит сессию — тогда sessionStorage.can_see_prices
+  // Ждём пока auth загрузит сессию (localStorage) — тогда can_see_prices
   // уже будет заполнен в момент рендера карточек товаров.
   // loadSession() НЕ редиректит — незалогиненный просто видит скрытые цены.
   ;(async function () {
@@ -86,20 +86,8 @@ function showToast(msg) {
 
 // ─── SKELETON LOADER ───
 document.addEventListener('DOMContentLoaded', function () {
-  var treeContainer = document.getElementById('catalog-tree')
-  var loader = document.getElementById('products-loader')
-  if (treeContainer && loader) {
-    // Прячем текстовый лоадер, показываем skeleton карточки
-    loader.style.display = 'none'
-    var skeleton = document.createElement('div')
-    skeleton.id = 'catalog-skeleton'
-    skeleton.className = 'skeleton-grid'
-    for (var i = 0; i < 8; i++) {
-      var card = document.createElement('div')
-      card.className = 'skeleton-card'
-      skeleton.appendChild(card)
-    }
-    treeContainer.parentNode.insertBefore(skeleton, treeContainer)
+  if (window.Novoled && window.Novoled.loaders) {
+    window.Novoled.loaders.showCatalog()
   }
 })
 
@@ -110,7 +98,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   syncBtn.addEventListener('click', async function () {
     // Только для авторизованных
-    const email = sessionStorage.getItem('user_email')
+    const email = localStorage.getItem('novoled_user_email')
     if (!email) {
       if (typeof showToast === 'function') showToast('Войдите в систему для обновления')
       return

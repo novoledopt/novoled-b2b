@@ -1,0 +1,7 @@
+node_modules/
+package-lock.json
+sync-sheet-to-supabase.js
+js/sync-server.js
+js/sync.js
+.env
+.env.local

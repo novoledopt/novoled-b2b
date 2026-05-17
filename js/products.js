@@ -95,8 +95,6 @@
       price:       row.price ? Number(row.price) : null,
       in_stock:    parseBool(row.in_stock),
       image_1:     str(row.image_1),
-      image_2:     str(row.image_2),
-      image_3:     str(row.image_3),
     }
   }
 
@@ -110,8 +108,6 @@
 
   function getProductImage(product) {
     if (product.image_1) return fixImagePath(product.image_1)
-    if (product.image_2) return fixImagePath(product.image_2)
-    if (product.image_3) return fixImagePath(product.image_3)
     return COMING_SOON_IMG
   }
 
@@ -453,7 +449,6 @@
     const body  = document.getElementById('product-modal-body')
     if (!modal || !body) return
 
-    const images = [product.image_1, product.image_2, product.image_3].filter(Boolean).map(fixImagePath)
     const mainImg = getProductImage(product)
     const stockLabel = product.in_stock ? 'В НАЛИЧИИ' : 'ОЖИДАЕТСЯ ПОСТАВКА'
     const canSee = (typeof canUserSeePrices === 'function') ? canUserSeePrices() : false
@@ -462,17 +457,10 @@
     body.innerHTML =
       '<div class="modal-product-layout">' +
         '<div class="modal-product-gallery">' +
-          '<div class="modal-main-image">' +
-            '<img id="modal-main-image" src="' + mainImg + '" alt="' + product.name + '"' +
+          '<div class="modal-single-image">' +
+            '<img src="' + mainImg + '" alt="' + product.name + '"' +
                ' onerror="this.onerror=null;this.src=\'' + COMING_SOON_IMG + '\'" />' +
           '</div>' +
-          (images.length ? '<div class="modal-thumbs">' +
-            images.map(function(src, idx) {
-              return '<button type="button" class="modal-thumb' + (idx === 0 ? ' modal-thumb-active' : '') + '" data-src="' + src + '">' +
-                '<img src="' + src + '" alt="' + product.name + '" onerror="this.onerror=null;this.src=\'' + COMING_SOON_IMG + '\'" />' +
-              '</button>'
-            }).join('') +
-          '</div>' : '') +
         '</div>' +
         '<div class="modal-product-info">' +
           '<div class="modal-product-header"><div>' +
@@ -513,15 +501,7 @@
         '</div>' +
       '</div>'
 
-    const mainImgEl = document.getElementById('modal-main-image')
-    body.querySelectorAll('.modal-thumb').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        const src = btn.getAttribute('data-src')
-        if (src && mainImgEl) mainImgEl.src = src
-        body.querySelectorAll('.modal-thumb').forEach(function(b) { b.classList.remove('modal-thumb-active') })
-        btn.classList.add('modal-thumb-active')
-      })
-    })
+    // Одно фото — слушатель тумбнейлов не нужен
 
     let modalQty = 1
     const qtyValueEl = document.getElementById('modal-qty-value')

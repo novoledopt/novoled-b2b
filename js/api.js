@@ -1,6 +1,6 @@
 ;(function () {
   // ─── ЗАМЕНИТЕ НА ВАШ РЕАЛЬНЫЙ URL APPS SCRIPT ───────────────────
-  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxU9BXOdmvpoyTNXtjgwiLR9q2IA5AKTBzLcp66EuvGQmVxnYgboa7hn5AP1YzeSXFo/exec'
+  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx5fdTzsSvO90G4AWBK9Ssnw6LIpiVn0qlTc_rA6PtGM4Sy26Osb4jMkaqtyTjFY8X8/exec'
   // ─────────────────────────────────────────────────────────────────
 
   // Кэш в памяти (для текущей вкладки — мгновенно)
@@ -98,5 +98,6 @@
   }
 
   window.Novoled = window.Novoled || {}
-  window.Novoled.api = { getAllProducts, getProductById, syncFromSheet, clearCache }
+  window.Novoled.api        = { getAllProducts, getProductById, syncFromSheet, clearCache }
+  window.Novoled._scriptUrl = APPS_SCRIPT_URL   // используется в cart.js для POST
 })()

@@ -1,7 +1,13 @@
 ;(function () {
   const CART_KEY    = 'novoled_b2b_cart_v1'
-  const HISTORY_KEY = 'novoled_order_history_v1'
-  const MAX_HISTORY = 20 // максимум заказов в истории
+  // История заказов теперь хранится в Google Sheets (лист orders)
+  // APPS_SCRIPT_URL берётся из api.js — убедитесь что оба файла используют один URL
+  function getAppsScriptUrl() {
+    // Читаем из api.js через общий namespace — или fallback на auth.js
+    return (window.Novoled && window.Novoled._scriptUrl)
+      ? window.Novoled._scriptUrl
+      : (typeof _AUTH_SCRIPT_URL !== 'undefined' ? _AUTH_SCRIPT_URL : '')
+  }
 
   // ─── КОРЗИНА: хранение ────────────────────────────────────────────
   function readCart() {
@@ -45,40 +51,21 @@
     return _priceCache[String(id)] || null
   }
 
-  // ─── ИСТОРИЯ ЗАКАЗОВ ─────────────────────────────────────────────
-  function readHistory() {
-    try {
-      const raw = localStorage.getItem(HISTORY_KEY)
-      if (!raw) return []
-      const parsed = JSON.parse(raw)
-      return Array.isArray(parsed) ? parsed : []
-    } catch { return [] }
-  }
+  // ─── ИСТОРИЯ ЗАКАЗОВ (Google Sheets) ────────────────────────────
 
-  function saveOrderToHistory(orderData, cartItems, canSee) {
-    const history = readHistory()
-    const order = {
-      id:      Date.now(),
-      date:    new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Kiev' }),
-      company: orderData.company || '',
-      name:    orderData.name    || '',
-      phone:   orderData.phone   || '',
-      email:   orderData.email   || '',
-      comment: orderData.comment || '',
-      items:   cartItems.map(function(i) {
-        const price = canSee ? (getPrice(i.id) || 0) : null
-        return { id: i.id, name: i.name, socket: i.socket, unit: i.unit, qty: i.qty, price: price }
-      }),
-      total: (function() {
-        if (!canSee) return null
-        return cartItems.reduce(function(s, i) {
-          return s + (Number(i.qty) || 0) * (getPrice(i.id) || 0)
-        }, 0)
-      })()
+  // Загружает историю заказов с сервера по email клиента
+  async function fetchOrderHistory(email) {
+    if (!email) return []
+    try {
+      const url = getAppsScriptUrl()
+      if (!url || url.includes('ВСТАВЬТЕ')) return []
+      const res  = await fetch(url + '?action=getOrderHistory&email=' + encodeURIComponent(email))
+      const data = await res.json()
+      return Array.isArray(data.orders) ? data.orders : []
+    } catch (err) {
+      console.warn('Не удалось загрузить историю:', err)
+      return []
     }
-    history.unshift(order)
-    if (history.length > MAX_HISTORY) history.length = MAX_HISTORY
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(history))
   }
 
   function reorderFromHistory(order) {
@@ -138,6 +125,10 @@
     if (!badge) return
     const total = readCart().reduce(function(s, i) { return s + (Number(i.qty) || 0) }, 0)
     badge.textContent = String(total)
+    // Pop-анимация при изменении
+    badge.classList.remove('pop')
+    void badge.offsetWidth // reflow
+    badge.classList.add('pop')
   }
 
   // ─── РЕНДЕР КОРЗИНЫ ──────────────────────────────────────────────
@@ -161,7 +152,7 @@
       itemsBody.innerHTML = ''
       if (itemsCountEl) itemsCountEl.textContent = '0'
       if (totalEl) totalEl.textContent = '0 ₽'
-      renderHistorySection(canSee)
+      renderHistorySection()
       return
     }
 
@@ -239,17 +230,23 @@
       if (removeBtn) { removeFromCart(removeBtn.getAttribute('data-remove')); await renderCartPage() }
     })
 
-    renderHistorySection(canSee)
+    // История загружается асинхронно — не блокирует отображение корзины
+    renderHistorySection()
   }
 
   // ─── ИСТОРИЯ ЗАКАЗОВ: рендер ─────────────────────────────────────
-  function renderHistorySection(canSee) {
+  async function renderHistorySection() {
     const container = document.getElementById('order-history-section')
     if (!container) return
 
-    // Кратковременный скелетон пока JS рендерит историю
+    const email  = (typeof getUserEmail === 'function') ? getUserEmail() : ''
+    const canSee = (typeof canUserSeePrices === 'function') ? canUserSeePrices() : false
+
+    // Скелетон пока грузим
     if (window.Novoled && window.Novoled.loaders) window.Novoled.loaders.showHistory()
-    const history = readHistory()
+
+    const history = await fetchOrderHistory(email)
+
     if (!history.length) {
       container.innerHTML =
         '<h2 class="history-title">История заказов</h2>' +
@@ -263,120 +260,97 @@
 
     history.forEach(function(order) {
       const totalStr = (canSee && order.total != null && order.total > 0)
-        ? order.total.toFixed(2) + ' ₽'
+        ? Number(order.total).toFixed(2) + ' ₽'
         : (order.items.length + ' позиц.')
+
       const itemsPreview = order.items.slice(0, 3).map(function(i) {
         return '<span class="history-item-chip">' + i.name + (i.qty > 1 ? ' ×' + i.qty : '') + '</span>'
-      }).join('') + (order.items.length > 3 ? '<span class="history-item-chip muted">+' + (order.items.length - 3) + ' ещё</span>' : '')
+      }).join('') + (order.items.length > 3
+        ? '<span class="history-item-chip muted">+' + (order.items.length - 3) + ' ещё</span>'
+        : '')
+
+      const statusClass = order.status === 'Выполнен' ? 'status-done'
+        : order.status === 'Отменён' ? 'status-cancelled'
+        : 'status-new'
+
+      // Строим тултип с позициями
+      var tooltipItems = order.items.map(function(it) {
+        var priceStr = (canSee && it.price) ? ' · ' + (it.qty * it.price).toFixed(0) + ' ₽' : ''
+        return '<div class="history-tooltip-item">' +
+          '<span class="history-tooltip-item-name">' + it.name + '</span>' +
+          '<span class="history-tooltip-item-qty">×' + it.qty + priceStr + '</span>' +
+        '</div>'
+      }).join('')
+      var tooltipTotal = (canSee && order.total != null && order.total > 0)
+        ? '<div class="history-tooltip-total"><span class="history-tooltip-total-label">Итого</span><span class="history-tooltip-total-value">' + Number(order.total).toFixed(2) + ' ₽</span></div>'
+        : ''
 
       html +=
-        '<div class="history-card" data-order-id="' + order.id + '">' +
+        '<div class="history-card">' +
           '<div class="history-card-head">' +
             '<div class="history-meta">' +
-              '<span class="history-date">' + order.date + '</span>' +
+              '<span class="history-date">' + (order.date || '') + '</span>' +
               (order.company ? '<span class="history-company">' + order.company + '</span>' : '') +
             '</div>' +
-            '<span class="history-total">' + totalStr + '</span>' +
+            '<div style="display:flex;align-items:center;gap:10px">' +
+              '<span class="history-status ' + statusClass + '">' + (order.status || 'Новый') + '</span>' +
+              '<span class="history-total">' + totalStr + '</span>' +
+            '</div>' +
           '</div>' +
           '<div class="history-items-preview">' + itemsPreview + '</div>' +
           '<div class="history-card-actions">' +
-            '<button type="button" class="btn-history-details" data-order-id="' + order.id + '">Детали</button>' +
+            // Кнопка «Детали» заменена на hover-тултип
+            '<div class="history-details-wrap">' +
+              '<button type="button" class="btn-history-details" tabindex="0">Детали</button>' +
+              '<div class="history-tooltip">' +
+                '<div class="history-tooltip-title">Позиции заказа</div>' +
+                tooltipItems +
+                tooltipTotal +
+              '</div>' +
+            '</div>' +
             '<button type="button" class="btn-history-reorder" data-order-id="' + order.id + '">↺ Повторить заказ</button>' +
           '</div>' +
         '</div>'
     })
     html += '</div>'
 
-    // Модалка деталей заказа (скрытая)
-    html +=
-      '<div id="history-modal" class="modal-backdrop" hidden>' +
-        '<div class="modal-window" style="max-width:560px">' +
-          '<button class="modal-close-btn" data-modal-close type="button" aria-label="Закрыть">&#x2715;</button>' +
-          '<div id="history-modal-body"></div>' +
-        '</div>' +
-      '</div>'
+    // Модалка деталей не нужна — используется hover-тултип
 
     container.innerHTML = html
 
     // Делегирование событий
     container.addEventListener('click', function(e) {
-      // Кнопка "Повторить заказ"
+      // Повторить заказ
       const reorderBtn = e.target.closest('.btn-history-reorder')
       if (reorderBtn) {
-        const id = Number(reorderBtn.getAttribute('data-order-id'))
-        const order = readHistory().find(function(o) { return o.id === id })
+        const id = reorderBtn.getAttribute('data-order-id')
+        const order = history.find(function(o) { return String(o.id) === String(id) })
         if (order) reorderFromHistory(order)
-        return
-      }
-      // Кнопка "Детали"
-      const detailsBtn = e.target.closest('.btn-history-details')
-      if (detailsBtn) {
-        const id = Number(detailsBtn.getAttribute('data-order-id'))
-        const order = readHistory().find(function(o) { return o.id === id })
-        if (order) openHistoryModal(order, canSee)
-        return
-      }
-      // Закрыть модалку
-      if (e.target.closest('[data-modal-close]') || e.target.id === 'history-modal') {
-        const m = document.getElementById('history-modal')
-        if (m) m.hidden = true
       }
     })
   }
 
-  function openHistoryModal(order, canSee) {
-    const modal = document.getElementById('history-modal')
-    const body  = document.getElementById('history-modal-body')
-    if (!modal || !body) return
-
-    const totalStr = (canSee && order.total != null && order.total > 0)
-      ? order.total.toFixed(2) + ' ₽' : '—'
-
-    let rows = order.items.map(function(i) {
-      const price = (canSee && i.price) ? i.price.toFixed(2) : '—'
-      const sum   = (canSee && i.price) ? (i.price * (i.qty || 1)).toFixed(2) : '—'
-      return '<tr>' +
-        '<td><div class="cart-item-name">' + i.name + '</div><div class="cart-item-meta">Арт.: ' + i.id + '</div></td>' +
-        '<td style="text-align:center">' + (i.qty || 1) + '</td>' +
-        '<td style="text-align:right">' + price + '</td>' +
-        '<td style="text-align:right">' + sum + '</td>' +
-      '</tr>'
-    }).join('')
-
-    body.innerHTML =
-      '<h2 style="margin:0 0 12px">Заказ от ' + order.date + '</h2>' +
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;margin-bottom:16px;font-size:13px">' +
-        (order.company ? '<div><span style="color:var(--text-muted)">Компания:</span> ' + order.company + '</div>' : '') +
-        (order.name    ? '<div><span style="color:var(--text-muted)">Контакт:</span> ' + order.name + '</div>' : '') +
-        (order.phone   ? '<div><span style="color:var(--text-muted)">Телефон:</span> ' + order.phone + '</div>' : '') +
-        (order.email   ? '<div><span style="color:var(--text-muted)">Email:</span> ' + order.email + '</div>' : '') +
-        (order.comment ? '<div style="grid-column:1/-1"><span style="color:var(--text-muted)">Комментарий:</span> ' + order.comment + '</div>' : '') +
-      '</div>' +
-      '<table style="width:100%;border-collapse:collapse;font-size:13px">' +
-        '<thead><tr>' +
-          '<th style="text-align:left;padding:6px 0;border-bottom:1px solid var(--border-subtle)">Товар</th>' +
-          '<th style="text-align:center;padding:6px;border-bottom:1px solid var(--border-subtle)">Кол.</th>' +
-          '<th style="text-align:right;padding:6px 0;border-bottom:1px solid var(--border-subtle)">Цена</th>' +
-          '<th style="text-align:right;padding:6px 0;border-bottom:1px solid var(--border-subtle)">Сумма</th>' +
-        '</tr></thead>' +
-        '<tbody>' + rows + '</tbody>' +
-        (canSee ? '<tfoot><tr><td colspan="3" style="text-align:right;padding-top:10px;font-weight:600">Итого:</td><td style="text-align:right;padding-top:10px;font-weight:600">' + totalStr + '</td></tr></tfoot>' : '') +
-      '</table>' +
-      '<button type="button" class="btn-history-reorder" data-order-id="' + order.id + '" style="margin-top:20px;width:100%">↺ Повторить этот заказ</button>'
-
-    modal.hidden = false
-    document.addEventListener('keydown', function esc(e) {
-      if (e.key === 'Escape') { modal.hidden = true; document.removeEventListener('keydown', esc) }
-    }, { once: true })
-  }
-
-  // ─── СТРАНИЦА КОРЗИНЫ ─────────────────────────────────────────────
+    // ─── СТРАНИЦА КОРЗИНЫ ─────────────────────────────────────────────
   function initCartPage() {
     renderCartPage()
 
     const form     = document.getElementById('request-form')
     const resultEl = document.getElementById('request-result')
     if (!form || !resultEl) return
+
+    // Кнопка «наверх» на странице корзины
+    ;(function() {
+      var topBtn = document.createElement('button')
+      topBtn.className = 'scroll-top-btn-cart'
+      topBtn.setAttribute('aria-label', 'Наверх')
+      topBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>'
+      document.body.appendChild(topBtn)
+      topBtn.addEventListener('click', function() { window.scrollTo({ top: 0, behavior: 'smooth' }) })
+      window.addEventListener('scroll', function() {
+        if (window.scrollY > 300) topBtn.classList.add('visible')
+        else topBtn.classList.remove('visible')
+      }, { passive: true })
+    })()
 
     form.addEventListener('submit', async function(e) {
       e.preventDefault()
@@ -408,46 +382,55 @@
         comment: formData.get('comment') || '',
       }
 
-      const itemsText = cartItems.map(function(i) {
-        const qty   = Number(i.qty) || 0
-        const price = canSee ? getPrice(i.id) : null
-        return i.name + ' ×' + qty + (price ? ' (' + (qty * price).toFixed(2) + ' ₽)' : '')
-      }).join('; ')
+      // Формируем items как массив объектов для записи в Google Sheets
+      const orderId   = String(Date.now())
+      const orderDate = new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' })
+      const orderItems = cartItems.map(function(i) {
+        return {
+          id:     i.id,
+          name:   i.name,
+          socket: i.socket || '',
+          unit:   i.unit   || '',
+          qty:    Number(i.qty) || 0,
+          price:  canSee ? (getPrice(i.id) || null) : null,
+        }
+      })
 
-      const orderRow = {
-        date:    new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Kiev' }),
-        company: orderData.company,
-        name:    orderData.name,
-        phone:   orderData.phone,
-        email:   orderData.email,
-        items:   itemsText,
-        total:   (canSee && totalSum > 0) ? totalSum.toFixed(2) + ' ₽' : '—',
-        comment: orderData.comment,
-        status:  'Новый',
+      const orderPayload = {
+        order_id: orderId,
+        date:     orderDate,
+        email:    orderData.email   || (typeof getUserEmail === 'function' ? getUserEmail() : ''),
+        company:  orderData.company || '',
+        name:     orderData.name    || '',
+        phone:    orderData.phone   || '',
+        comment:  orderData.comment || '',
+        items:    orderItems,
       }
 
-      const ORDERS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw3HIoHc1d8pR0x7h58L8xvEGofchb_tS6ian7hxRpoZJ9UxHRrbhLvxMcu5HLdV6xE/exec'
-
+      const scriptUrl = getAppsScriptUrl()
       const submitBtn = form.querySelector('[type="submit"]')
       if (submitBtn) submitBtn.disabled = true
       resultEl.textContent = 'Отправляем заказ...'
       resultEl.style.color = 'var(--text-muted)'
 
       try {
-        await fetch(ORDERS_SCRIPT_URL, {
-          method: 'POST', mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(orderRow),
-        })
+        if (!scriptUrl || scriptUrl.includes('ВСТАВЬТЕ')) {
+          throw new Error('URL Apps Script не настроен в js/auth.js')
+        }
 
-        // Сохраняем в историю ДО очистки корзины
-        saveOrderToHistory(orderData, cartItems, canSee)
+        await fetch(scriptUrl, {
+          method: 'POST',
+          mode:   'no-cors',   // Apps Script не возвращает CORS-заголовки на POST
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify(orderPayload),
+        })
 
         resultEl.textContent = '✓ Заказ отправлен! Мы свяжемся с вами для подтверждения.'
         resultEl.style.color = 'var(--accent)'
         form.reset()
         clearCart()
-        renderCartPage()
+        // Перерисовываем корзину и обновляем историю с сервера
+        await renderCartPage()
       } catch (err) {
         console.error('Ошибка отправки:', err)
         resultEl.textContent = 'Ошибка отправки. Пожалуйста, свяжитесь с нами напрямую.'

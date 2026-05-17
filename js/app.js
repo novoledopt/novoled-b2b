@@ -84,10 +84,14 @@ function showToast(msg) {
   }, 2000)
 }
 
-// ─── SKELETON LOADER ───
+// ─── SKELETON LOADER — только на странице каталога ───
 document.addEventListener('DOMContentLoaded', function () {
   if (window.Novoled && window.Novoled.loaders) {
-    window.Novoled.loaders.showCatalog()
+    if (document.getElementById('catalog-tree')) {
+      // Мы на странице каталога
+      window.Novoled.loaders.showCatalog()
+    }
+    // Корзина сама вызывает showCart() из initCartPage() в cart.js
   }
 })
 
@@ -109,7 +113,8 @@ document.addEventListener('DOMContentLoaded', function () {
     if (icon) icon.style.animation = 'spin-icon 0.8s linear infinite'
 
     try {
-      const count = await window.Novoled.api.syncFromSheet()
+      const result = await window.Novoled.api.syncFromSheet()
+      const count = Array.isArray(result) ? result.length : (Number(result) || 0)
       if (typeof showToast === 'function') showToast('✓ Каталог обновлён (' + count + ' товаров)')
 
       // Перезагружаем каталог

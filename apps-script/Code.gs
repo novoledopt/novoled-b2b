@@ -1,12 +1,19 @@
-// ─── НАСТРОЙКИ — ЗАМЕНИТЕ ID ТАБЛИЦ НА СВОИ ─────────────────────
-const SPREADSHEET_ID = '1CYwbHJ7yFGl_x6to4LLlSpPdQO2qpwzExS8whgrny8E'  // ID вашей Google Таблицы
-// ─────────────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════
+//  NOVOLed — Google Apps Script
+//  Файл: apps-script/Code.gs
+// ════════════════════════════════════════════════════════════════════
 
-// Имена листов таблицы (не меняйте без необходимости)
-const SHEET_PRODUCTS = 'products'   // лист с товарами
-const SHEET_CLIENTS  = 'clients'    // лист с клиентами
+// ─── ЗАМЕНИТЕ ID ТАБЛИЦЫ НА СВОЙ ────────────────────────────────
+const SPREADSHEET_ID = '1CYwbHJ7yFGl_x6to4LLlSpPdQO2qpwzExS8whgrny8E'
+// ────────────────────────────────────────────────────────────────
 
-// ─── CORS — разрешаем запросы с любого домена ────────────────────
+const SHEET_PRODUCTS = 'products'
+const SHEET_CLIENTS  = 'clients'
+const SHEET_ORDERS   = 'orders'   // история заказов
+
+// ════════════════════════════════════════════════════════════════════
+//  GET — каталог, доступ, история заказов
+// ════════════════════════════════════════════════════════════════════
 function doGet(e) {
   const params = e.parameter || {}
   const action = params.action || ''
@@ -14,13 +21,10 @@ function doGet(e) {
 
   let result
   try {
-    if (action === 'getProducts') {
-      result = actionGetProducts(email)
-    } else if (action === 'checkAccess') {
-      result = actionCheckAccess(email)
-    } else {
-      result = { error: 'Неизвестное действие: ' + action }
-    }
+    if      (action === 'getProducts')    result = actionGetProducts(email)
+    else if (action === 'checkAccess')    result = actionCheckAccess(email)
+    else if (action === 'getOrderHistory') result = actionGetOrderHistory(email)
+    else result = { error: 'Неизвестное действие: ' + action }
   } catch (err) {
     result = { error: err.message }
   }
@@ -30,16 +34,32 @@ function doGet(e) {
     .setMimeType(ContentService.MimeType.JSON)
 }
 
-// ─── ДЕЙСТВИЕ: получить товары ───────────────────────────────────
+// ════════════════════════════════════════════════════════════════════
+//  POST — сохранить заказ
+// ════════════════════════════════════════════════════════════════════
+function doPost(e) {
+  let result
+  try {
+    const body = JSON.parse(e.postData.contents || '{}')
+    result = actionSaveOrder(body)
+  } catch (err) {
+    result = { ok: false, error: err.message }
+  }
+
+  return ContentService
+    .createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON)
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  ДЕЙСТВИЯ
+// ════════════════════════════════════════════════════════════════════
+
+// ── Каталог товаров ───────────────────────────────────────────────
 function actionGetProducts(email) {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID)
-
-  // Проверяем доступ клиента
+  const ss         = SpreadsheetApp.openById(SPREADSHEET_ID)
   const clientInfo = getClientInfo(ss, email)
-  const hasAccess      = clientInfo.active
-  const canSeePrices   = clientInfo.can_see_prices
 
-  // Читаем товары
   const sheet = ss.getSheetByName(SHEET_PRODUCTS)
   if (!sheet) return { error: 'Лист "' + SHEET_PRODUCTS + '" не найден' }
 
@@ -48,45 +68,177 @@ function actionGetProducts(email) {
   const products = []
 
   for (var i = 1; i < rows.length; i++) {
-    const row = rows[i]
     const obj = {}
-    headers.forEach(function(h, idx) { obj[h] = row[idx] })
-
-    // Пропускаем пустые строки
+    headers.forEach(function(h, idx) { obj[h] = rows[i][idx] })
     if (!obj.id) continue
-
-    // Нормализуем поля
     obj.in_stock = parseBool(obj.in_stock)
     obj.price    = obj.price ? Number(obj.price) : null
-
-    // Скрываем цену если нет доступа
-    if (!canSeePrices) {
-      obj.price = null
-    }
-
+    if (!clientInfo.can_see_prices) obj.price = null
     products.push(obj)
   }
 
   return {
-    products:      products,
-    hasAccess:     hasAccess,
-    canSeePrices:  canSeePrices,
+    products:     products,
+    hasAccess:    clientInfo.active,
+    canSeePrices: clientInfo.can_see_prices,
   }
 }
 
-// ─── ДЕЙСТВИЕ: проверить доступ по email ─────────────────────────
+// ── Проверка доступа ──────────────────────────────────────────────
 function actionCheckAccess(email) {
   if (!email) return { access: false, can_see_prices: false }
   const ss   = SpreadsheetApp.openById(SPREADSHEET_ID)
   const info = getClientInfo(ss, email)
-  return {
-    access:        info.active,
-    can_see_prices: info.can_see_prices,
-  }
+  return { access: info.active, can_see_prices: info.can_see_prices }
 }
 
-// ─── ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ─────────────────────────────────────
+// ── История заказов по email ──────────────────────────────────────
+function actionGetOrderHistory(email) {
+  if (!email) return { orders: [] }
 
+  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID)
+  const sheet = ss.getSheetByName(SHEET_ORDERS)
+  if (!sheet) return { orders: [] }
+
+  const rows    = sheet.getDataRange().getValues()
+  if (rows.length < 2) return { orders: [] }
+
+  const headers  = rows[0].map(function(h) { return String(h).trim() })
+  const emailIdx = headers.indexOf('email')
+  if (emailIdx < 0) return { orders: [] }
+
+  // Группируем строки по order_id
+  const orderMap = {}
+  const orderDates = {}
+
+  for (var i = 1; i < rows.length; i++) {
+    const row = rows[i]
+    const obj = {}
+    headers.forEach(function(h, idx) { obj[h] = row[idx] })
+
+    const rowEmail = String(obj.email || '').toLowerCase().trim()
+    if (rowEmail !== email) continue
+
+    const orderId = String(obj.order_id || '')
+    if (!orderId) continue
+
+    if (!orderMap[orderId]) {
+      orderMap[orderId]  = []
+      orderDates[orderId] = String(obj.date || '')
+    }
+
+    orderMap[orderId].push({
+      product_id:   String(obj.product_id   || ''),
+      product_name: String(obj.product_name || ''),
+      socket:       String(obj.socket       || ''),
+      unit:         String(obj.unit         || ''),
+      qty:          Number(obj.qty)          || 0,
+      price:        obj.price ? Number(obj.price) : null,
+      // доп. поля из шапки заказа (одинаковы во всех строках одного order_id)
+      company:      String(obj.company      || ''),
+      client_name:  String(obj.client_name  || ''),
+      phone:        String(obj.phone        || ''),
+      comment:      String(obj.comment      || ''),
+      status:       String(obj.status       || ''),
+    })
+  }
+
+  // Собираем итоговый массив заказов, сортируем новые первыми
+  const orders = Object.keys(orderMap).map(function(id) {
+    const items = orderMap[id]
+    const first = items[0]
+
+    // Считаем сумму только если у всех позиций есть цена
+    var total = null
+    var allHavePrice = items.every(function(it) { return it.price !== null })
+    if (allHavePrice) {
+      total = items.reduce(function(s, it) { return s + it.qty * (it.price || 0) }, 0)
+    }
+
+    return {
+      id:          id,
+      date:        orderDates[id],
+      company:     first.company,
+      client_name: first.client_name,
+      phone:       first.phone,
+      comment:     first.comment,
+      status:      first.status,
+      total:       total,
+      items:       items.map(function(it) {
+        return {
+          id:    it.product_id,
+          name:  it.product_name,
+          socket: it.socket,
+          unit:  it.unit,
+          qty:   it.qty,
+          price: it.price,
+        }
+      }),
+    }
+  })
+
+  // Сортируем по дате — свежие первыми
+  orders.sort(function(a, b) {
+    return new Date(b.date) - new Date(a.date)
+  })
+
+  return { orders: orders }
+}
+
+// ── Сохранить заказ в таблицу ─────────────────────────────────────
+function actionSaveOrder(body) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID)
+
+  // ─ Инициализируем лист orders если нет ─
+  var sheet = ss.getSheetByName(SHEET_ORDERS)
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_ORDERS)
+    sheet.appendRow([
+      'order_id', 'date', 'email', 'company', 'client_name', 'phone', 'comment',
+      'product_id', 'product_name', 'socket', 'unit', 'qty', 'price', 'status'
+    ])
+    // Заголовки — жирные
+    sheet.getRange(1, 1, 1, 14).setFontWeight('bold')
+    sheet.setFrozenRows(1)
+  }
+
+  const orderId   = body.order_id || String(Date.now())
+  const date      = body.date     || new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' })
+  const email     = (body.email   || '').toLowerCase().trim()
+  const company   = body.company  || ''
+  const name      = body.name     || ''
+  const phone     = body.phone    || ''
+  const comment   = body.comment  || ''
+  const items     = Array.isArray(body.items) ? body.items : []
+
+  if (!items.length) return { ok: false, error: 'Пустой заказ' }
+
+  // Одна строка на каждую позицию
+  items.forEach(function(item) {
+    sheet.appendRow([
+      orderId,
+      date,
+      email,
+      company,
+      name,
+      phone,
+      comment,
+      String(item.id   || ''),
+      String(item.name || ''),
+      String(item.socket || ''),
+      String(item.unit  || ''),
+      Number(item.qty)  || 0,
+      item.price != null ? Number(item.price) : '',
+      'Новый',
+    ])
+  })
+
+  return { ok: true, order_id: orderId }
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  ВСПОМОГАТЕЛЬНЫЕ
+// ════════════════════════════════════════════════════════════════════
 function getClientInfo(ss, email) {
   const notFound = { active: false, can_see_prices: false }
   if (!email) return notFound
@@ -96,27 +248,26 @@ function getClientInfo(ss, email) {
 
   const rows    = sheet.getDataRange().getValues()
   const headers = rows[0].map(function(h) { return String(h).trim().toLowerCase() })
-  const emailIdx    = headers.indexOf('email')
-  const activeIdx   = headers.indexOf('active')
-  const pricesIdx   = headers.indexOf('can_see_prices')
+  const eIdx = headers.indexOf('email')
+  const aIdx = headers.indexOf('active')
+  const pIdx = headers.indexOf('can_see_prices')
 
-  if (emailIdx < 0) return notFound
+  if (eIdx < 0) return notFound
 
   for (var i = 1; i < rows.length; i++) {
-    const rowEmail = String(rows[i][emailIdx] || '').toLowerCase().trim()
-    if (rowEmail === email) {
-      const active      = activeIdx   >= 0 ? parseBool(rows[i][activeIdx])  : true
-      const canSeePrices = pricesIdx  >= 0 ? parseBool(rows[i][pricesIdx])  : true
-      return { active: active, can_see_prices: canSeePrices }
+    if (String(rows[i][eIdx] || '').toLowerCase().trim() === email) {
+      return {
+        active:        aIdx >= 0 ? parseBool(rows[i][aIdx]) : true,
+        can_see_prices: pIdx >= 0 ? parseBool(rows[i][pIdx]) : true,
+      }
     }
   }
   return notFound
 }
 
 function parseBool(value) {
-  if (value === true)  return true
-  if (value === false) return false
-  if (value == null)   return false
+  if (value === true || value === false) return value
+  if (value == null) return false
   const v = String(value).toLowerCase().trim()
   return v === 'true' || v === '1' || v === 'yes' || v === 'да' || v === 'истина'
 }

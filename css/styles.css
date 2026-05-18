@@ -2020,3 +2020,126 @@ input:focus, textarea:focus {
   border-color: rgba(77,242,155,0.7);
   box-shadow: 0 0 20px rgba(77,242,155,0.25);
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   ФУТЕР — два представителя
+   ═══════════════════════════════════════════════════════════════════ */
+
+.footer-reps {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media (min-width: 540px) {
+  .footer-reps {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 0;
+  }
+}
+
+.footer-divider {
+  width: 1px;
+  background: rgba(255,255,255,0.08);
+  margin: 0 24px;
+  flex-shrink: 0;
+  /* на мобиле — горизонтальная черта */
+  height: 1px;
+  width: 100%;
+  margin: 0;
+}
+
+@media (min-width: 540px) {
+  .footer-divider {
+    width: 1px;
+    height: auto;
+    margin: 0 24px;
+    align-self: stretch;
+  }
+}
+
+.footer-copy {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .footer-copy { margin-top: 20px; padding-top: 20px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   TELEGRAM-БАННЕР
+   ═══════════════════════════════════════════════════════════════════ */
+
+.tg-banner-wrap {
+  padding: 20px 16px 0 16px;
+}
+
+.tg-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(90deg, rgba(34,158,217,0.10) 0%, rgba(34,158,217,0.04) 100%);
+  border: 1px solid rgba(34,158,217,0.25);
+  border-radius: var(--radius-lg);
+  padding: 12px 16px;
+  text-decoration: none;
+  color: var(--text);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.tg-banner:hover {
+  background: linear-gradient(90deg, rgba(34,158,217,0.18) 0%, rgba(34,158,217,0.08) 100%);
+  border-color: rgba(34,158,217,0.5);
+}
+
+.tg-logo {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.tg-banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.tg-banner-text strong {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tg-banner-text span {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tg-banner-arrow {
+  font-size: 16px;
+  color: rgba(34,158,217,0.7);
+  flex-shrink: 0;
+  transition: transform 0.18s;
+}
+
+.tg-banner:hover .tg-banner-arrow {
+  transform: translateX(3px);
+}
+
+@media (max-width: 400px) {
+  .tg-banner-text span { display: none; }
+}

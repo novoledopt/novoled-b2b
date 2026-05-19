@@ -11,6 +11,10 @@ const SHEET_PRODUCTS = 'products'
 const SHEET_CLIENTS  = 'clients'
 const SHEET_ORDERS   = 'orders'   // история заказов
 
+// ─── EMAIL ДЛЯ УВЕДОМЛЕНИЙ О ЗАКАЗАХ ────────────────────────────
+const NOTIFY_EMAIL = 'novoledopt@gmail.com'
+// ────────────────────────────────────────────────────────────────
+
 // ════════════════════════════════════════════════════════════════════
 //  GET — каталог, доступ, история заказов
 // ════════════════════════════════════════════════════════════════════
@@ -233,6 +237,9 @@ function actionSaveOrder(body) {
     ])
   })
 
+  // Отправляем email-уведомление
+  sendOrderNotification({ orderId: orderId, date: date, email: email, company: company, name: name, phone: phone, comment: comment, items: items })
+
   return { ok: true, order_id: orderId }
 }
 
@@ -270,4 +277,123 @@ function parseBool(value) {
   if (value == null) return false
   const v = String(value).toLowerCase().trim()
   return v === 'true' || v === '1' || v === 'yes' || v === 'да' || v === 'истина'
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  УВЕДОМЛЕНИЕ О НОВОМ ЗАКАЗЕ НА EMAIL
+// ════════════════════════════════════════════════════════════════════
+function sendOrderNotification(data) {
+  try {
+    var subject = '🛒 Новый заказ #' + data.orderId + ' — ' + (data.company || data.name || data.email)
+
+    // ── Текстовая версия письма ───────────────────────────────────
+    var lines = []
+    lines.push('Новый заказ поступил через сайт NOVOLed B2B.')
+    lines.push('')
+    lines.push('─────────────────────────────────────────────')
+    lines.push('ЗАКАЗ #' + data.orderId)
+    lines.push('Дата:        ' + data.date)
+    lines.push('Email:       ' + data.email)
+    lines.push('Компания:    ' + (data.company  || '—'))
+    lines.push('Контакт:     ' + (data.name     || '—'))
+    lines.push('Телефон:     ' + (data.phone    || '—'))
+    if (data.comment) lines.push('Комментарий: ' + data.comment)
+    lines.push('─────────────────────────────────────────────')
+    lines.push('СОСТАВ ЗАКАЗА:')
+    lines.push('')
+
+    var totalKnown = true
+    var total = 0
+    var items = Array.isArray(data.items) ? data.items : []
+
+    items.forEach(function(item, idx) {
+      var qty   = Number(item.qty) || 0
+      var price = (item.price != null && item.price !== '') ? Number(item.price) : null
+      var line  = (idx + 1) + '. ' + (item.name || item.id)
+      if (item.socket) line += ' [' + item.socket + ']'
+      line += '  ×  ' + qty + ' ' + (item.unit || 'шт.')
+      if (price !== null) {
+        var sum = qty * price
+        line += '  —  ' + price.toLocaleString('ru-RU') + ' грн/шт.  =  ' + sum.toLocaleString('ru-RU') + ' грн'
+        total += sum
+      } else {
+        totalKnown = false
+        line += '  —  цена не указана'
+      }
+      lines.push(line)
+    })
+
+    lines.push('')
+    if (totalKnown && items.length > 0) {
+      lines.push('ИТОГО: ' + total.toLocaleString('ru-RU') + ' грн')
+    }
+    lines.push('─────────────────────────────────────────────')
+    lines.push('Откройте таблицу, чтобы обработать заказ.')
+    var textBody = lines.join('\n')
+
+    // ── HTML-версия письма ────────────────────────────────────────
+    var tableRows = items.map(function(item, idx) {
+      var qty      = Number(item.qty) || 0
+      var price    = (item.price != null && item.price !== '') ? Number(item.price) : null
+      var priceStr = price !== null ? price.toLocaleString('ru-RU') + ' грн' : '—'
+      var sumStr   = price !== null ? (qty * price).toLocaleString('ru-RU') + ' грн' : '—'
+      var bg       = idx % 2 === 0 ? '#f7f7f7' : '#ffffff'
+      return '<tr style="background:' + bg + '">' +
+        '<td style="padding:7px 10px;color:#666">' + (idx + 1) + '</td>' +
+        '<td style="padding:7px 10px"><b>' + (item.name || item.id) + '</b>' +
+          (item.socket ? ' <span style="color:#888;font-size:12px">[' + item.socket + ']</span>' : '') + '</td>' +
+        '<td style="padding:7px 10px;text-align:center">' + qty + ' ' + (item.unit || 'шт.') + '</td>' +
+        '<td style="padding:7px 10px;text-align:right">' + priceStr + '</td>' +
+        '<td style="padding:7px 10px;text-align:right"><b>' + sumStr + '</b></td>' +
+        '</tr>'
+    }).join('')
+
+    var footerRow = (totalKnown && items.length > 0)
+      ? '<tfoot><tr style="background:#1a1a2e;color:#fff">' +
+          '<td colspan="4" style="padding:9px 10px;text-align:right;font-weight:bold">ИТОГО:</td>' +
+          '<td style="padding:9px 10px;text-align:right;font-weight:bold">' + total.toLocaleString('ru-RU') + ' грн</td>' +
+        '</tr></tfoot>'
+      : ''
+
+    var infoRows =
+      '<tr><td style="color:#888;padding:4px 16px 4px 0;white-space:nowrap">Дата</td><td><b>' + data.date + '</b></td></tr>' +
+      '<tr><td style="color:#888;padding:4px 16px 4px 0">Email</td><td>' + data.email + '</td></tr>' +
+      '<tr><td style="color:#888;padding:4px 16px 4px 0">Компания</td><td>' + (data.company || '—') + '</td></tr>' +
+      '<tr><td style="color:#888;padding:4px 16px 4px 0">Контакт</td><td>' + (data.name || '—') + '</td></tr>' +
+      '<tr><td style="color:#888;padding:4px 16px 4px 0">Телефон</td><td>' + (data.phone || '—') + '</td></tr>' +
+      (data.comment ? '<tr><td style="color:#888;padding:4px 16px 4px 0">Комментарий</td><td>' + data.comment + '</td></tr>' : '')
+
+    var htmlBody =
+      '<div style="font-family:Arial,sans-serif;max-width:700px;color:#222;margin:0 auto">' +
+        '<div style="background:#1a1a2e;color:#fff;padding:18px 24px;border-radius:8px 8px 0 0">' +
+          '<h2 style="margin:0;font-size:20px">🛒 Новый заказ #' + data.orderId + '</h2>' +
+        '</div>' +
+        '<div style="border:1px solid #ddd;border-top:none;padding:24px;border-radius:0 0 8px 8px">' +
+          '<table style="font-size:14px;margin-bottom:20px">' + infoRows + '</table>' +
+          '<h3 style="margin:0 0 10px;font-size:15px;color:#333">Состав заказа</h3>' +
+          '<table style="width:100%;border-collapse:collapse;font-size:14px">' +
+            '<thead><tr style="background:#2d2d4e;color:#fff">' +
+              '<th style="padding:9px 10px;text-align:left;font-weight:normal">№</th>' +
+              '<th style="padding:9px 10px;text-align:left;font-weight:normal">Товар</th>' +
+              '<th style="padding:9px 10px;text-align:center;font-weight:normal">Кол-во</th>' +
+              '<th style="padding:9px 10px;text-align:right;font-weight:normal">Цена</th>' +
+              '<th style="padding:9px 10px;text-align:right;font-weight:normal">Сумма</th>' +
+            '</tr></thead>' +
+            '<tbody>' + tableRows + '</tbody>' +
+            footerRow +
+          '</table>' +
+        '</div>' +
+      '</div>'
+
+    MailApp.sendEmail({
+      to:       NOTIFY_EMAIL,
+      subject:  subject,
+      body:     textBody,
+      htmlBody: htmlBody,
+    })
+
+  } catch (mailErr) {
+    // Не роняем заказ из-за ошибки с почтой — просто логируем
+    Logger.log('sendOrderNotification error: ' + mailErr.message)
+  }
 }

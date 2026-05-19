@@ -238,7 +238,17 @@ function actionSaveOrder(body) {
   })
 
   // Отправляем email-уведомление
-  sendOrderNotification({ orderId: orderId, date: date, email: email, company: company, name: name, phone: phone, comment: comment, items: items })
+  var notifyData = {
+  orderId:  orderId,
+  date:     date,
+  email:    email,
+  company:  company,
+  name:     name,
+  phone:    phone,
+  comment:  comment,
+  items:    items
+  };
+  sendOrderNotification(notifyData);
 
   return { ok: true, order_id: orderId }
 }
@@ -314,7 +324,7 @@ function sendOrderNotification(data) {
       line += '  ×  ' + qty + ' ' + (item.unit || 'шт.')
       if (price !== null) {
         var sum = qty * price
-        line += '  —  ' + price.toLocaleString('ru-RU') + ' грн/шт.  =  ' + sum.toLocaleString('ru-RU') + ' грн'
+        line += '  —  ' + price.toLocaleString('ru-RU') + ' руб/шт.  =  ' + sum.toLocaleString('ru-RU') + ' руб'
         total += sum
       } else {
         totalKnown = false
@@ -325,7 +335,7 @@ function sendOrderNotification(data) {
 
     lines.push('')
     if (totalKnown && items.length > 0) {
-      lines.push('ИТОГО: ' + total.toLocaleString('ru-RU') + ' грн')
+      lines.push('ИТОГО: ' + total.toLocaleString('ru-RU') + ' руб')
     }
     lines.push('─────────────────────────────────────────────')
     lines.push('Откройте таблицу, чтобы обработать заказ.')
@@ -335,8 +345,8 @@ function sendOrderNotification(data) {
     var tableRows = items.map(function(item, idx) {
       var qty      = Number(item.qty) || 0
       var price    = (item.price != null && item.price !== '') ? Number(item.price) : null
-      var priceStr = price !== null ? price.toLocaleString('ru-RU') + ' грн' : '—'
-      var sumStr   = price !== null ? (qty * price).toLocaleString('ru-RU') + ' грн' : '—'
+      var priceStr = price !== null ? price.toLocaleString('ru-RU') + ' руб' : '—'
+      var sumStr   = price !== null ? (qty * price).toLocaleString('ru-RU') + ' руб' : '—'
       var bg       = idx % 2 === 0 ? '#f7f7f7' : '#ffffff'
       return '<tr style="background:' + bg + '">' +
         '<td style="padding:7px 10px;color:#666">' + (idx + 1) + '</td>' +
@@ -351,7 +361,7 @@ function sendOrderNotification(data) {
     var footerRow = (totalKnown && items.length > 0)
       ? '<tfoot><tr style="background:#1a1a2e;color:#fff">' +
           '<td colspan="4" style="padding:9px 10px;text-align:right;font-weight:bold">ИТОГО:</td>' +
-          '<td style="padding:9px 10px;text-align:right;font-weight:bold">' + total.toLocaleString('ru-RU') + ' грн</td>' +
+          '<td style="padding:9px 10px;text-align:right;font-weight:bold">' + total.toLocaleString('ru-RU') + ' руб</td>' +
         '</tr></tfoot>'
       : ''
 
@@ -396,19 +406,4 @@ function sendOrderNotification(data) {
     // Не роняем заказ из-за ошибки с почтой — просто логируем
     Logger.log('sendOrderNotification error: ' + mailErr.message)
   }
-}
-
-function testEmail() {
-  sendOrderNotification({
-    orderId: 'TEST-001',
-    date: new Date().toLocaleString('ru-RU'),
-    email: 'test@example.com',
-    company: 'Тест Компания',
-    name: 'Иван Иванов',
-    phone: '+38 000 000 0000',
-    comment: 'Тестовый заказ',
-    items: [
-      { id: '1', name: 'Тестовый товар', socket: 'E27', unit: 'шт.', qty: 5, price: 100 }
-    ]
-  })
 }

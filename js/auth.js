@@ -1,6 +1,6 @@
 // ─── КОНФИГУРАЦИЯ ────────────────────────────────────────────────
 // Замените на ваш реальный URL Apps Script (тот же, что в api.js)
-const _AUTH_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxU9BXOdmvpoyTNXtjgwiLR9q2IA5AKTBzLcp66EuvGQmVxnYgboa7hn5AP1YzeSXFo/exec'
+const _AUTH_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwgeGiv7qWar_NEnmESPkr-9tkEyHFBtkf4gH2qUoIgkUpAuMxGIQD5mF6yZp7RQJCU/exec'
 // ─────────────────────────────────────────────────────────────────
 
 // localStorage-ключи

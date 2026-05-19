@@ -1,6 +1,6 @@
 ;(function () {
   // ─── ЗАМЕНИТЕ НА ВАШ РЕАЛЬНЫЙ URL APPS SCRIPT ───────────────────
-  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx5fdTzsSvO90G4AWBK9Ssnw6LIpiVn0qlTc_rA6PtGM4Sy26Osb4jMkaqtyTjFY8X8/exec'
+  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwgeGiv7qWar_NEnmESPkr-9tkEyHFBtkf4gH2qUoIgkUpAuMxGIQD5mF6yZp7RQJCU/exec'
   // ─────────────────────────────────────────────────────────────────
 
   // Кэш в памяти (для текущей вкладки — мгновенно)

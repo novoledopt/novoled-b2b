@@ -397,3 +397,18 @@ function sendOrderNotification(data) {
     Logger.log('sendOrderNotification error: ' + mailErr.message)
   }
 }
+
+function testEmail() {
+  sendOrderNotification({
+    orderId: 'TEST-001',
+    date: new Date().toLocaleString('ru-RU'),
+    email: 'test@example.com',
+    company: 'Тест Компания',
+    name: 'Иван Иванов',
+    phone: '+38 000 000 0000',
+    comment: 'Тестовый заказ',
+    items: [
+      { id: '1', name: 'Тестовый товар', socket: 'E27', unit: 'шт.', qty: 5, price: 100 }
+    ]
+  })
+}

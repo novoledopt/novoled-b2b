@@ -11,8 +11,12 @@ if(!em)return{success:false,message:'Введите email'}
 try{const data=await _callAuthScript({action:'checkAccess',email:em})
 if(data.access){localStorage.setItem(_LS_EMAIL,em)
 localStorage.setItem(_LS_PRICES,String(!!data.can_see_prices))
+// Сбрасываем кэш продуктов, чтобы перезагрузить с ценами для этого пользователя
+if(window.Novoled&&window.Novoled.api)window.Novoled.api.clearCache()
 return{success:true,canSeePrices:!!data.can_see_prices}}else{return{success:false,message:'Email не найден. Запросите доступ у менеджера.'}}}catch(e){return{success:false,message:'Ошибка соединения. Попробуйте ещё раз.'}}}
-function logout(){localStorage.removeItem(_LS_EMAIL)
+function logout(){// Сбрасываем кэш продуктов при выходе, чтобы следующий анонимный сеанс не видел чужие данные
+if(window.Novoled&&window.Novoled.api)window.Novoled.api.clearCache()
+localStorage.removeItem(_LS_EMAIL)
 localStorage.removeItem(_LS_PRICES)
 window.location.href='login.html'}
 function getCurrentUser(){const email=localStorage.getItem(_LS_EMAIL)
@@ -24,9 +28,14 @@ return null}
 try{const data=await _callAuthScript({action:'checkAccess',email:user.email})
 if(!data.access){localStorage.removeItem(_LS_EMAIL)
 localStorage.removeItem(_LS_PRICES)
+if(window.Novoled&&window.Novoled.api)window.Novoled.api.clearCache()
 window.location.href='login.html'
 return null}
-localStorage.setItem(_LS_PRICES,String(!!data.can_see_prices))}catch(e){console.warn('Не удалось проверить доступ:',e)}
+const prevPrices=localStorage.getItem(_LS_PRICES)
+const newPrices=String(!!data.can_see_prices)
+localStorage.setItem(_LS_PRICES,newPrices)
+// Если статус can_see_prices изменился — сбрасываем кэш продуктов
+if(prevPrices!==newPrices){if(window.Novoled&&window.Novoled.api)window.Novoled.api.clearCache()}}catch(e){console.warn('Не удалось проверить доступ:',e)}
 return getCurrentUser()}
 function updateHeaderAuth(){const email=localStorage.getItem(_LS_EMAIL)
 const loginArea=document.getElementById('header-auth')

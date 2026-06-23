@@ -32,10 +32,22 @@
         </a>
         <nav class="main-nav">
           <a href="index.html" class="nav-link nav-link-active">Каталог</a>
-          <a href="cart.html" class="nav-link">
-            Корзина
-            <span id="cart-count-badge" class="cart-count-badge">0</span>
-          </a>
+          <div class="cart-preview-wrap" id="cart-preview-wrap">
+            <a href="cart.html" class="nav-link" id="cart-preview-trigger">
+              Корзина
+              <span id="cart-count-badge" class="cart-count-badge">0</span>
+            </a>
+            <div class="cart-preview-dropdown" id="cart-preview-dropdown" hidden>
+              <div class="cart-preview-items" id="cart-preview-items"></div>
+              <div class="cart-preview-footer">
+                <div class="cart-preview-total">
+                  <span>Итого:</span>
+                  <span id="cart-preview-total-val">—</span>
+                </div>
+                <a href="cart.html" class="btn-primary cart-preview-btn">Оформить заказ</a>
+              </div>
+            </div>
+          </div>
           <div id="header-auth" class="header-auth-area">
             <!-- заполняется через updateHeaderAuth() -->
             <a href="login.html" class="auth-login-link">Войти</a>
@@ -87,6 +99,20 @@
             <div class="filters-group">
               <div class="filters-title">Цоколь</div>
               <div id="socket-filter-list" class="filter-chips"></div>
+            </div>
+            <div class="filters-group filters-group--controls">
+              <div class="filters-title">Дополнительно</div>
+              <div class="filter-chips">
+                <button type="button" id="filter-in-stock" class="filter-chip">
+                  <span>● Только в наличии</span>
+                </button>
+                <select id="sort-select" class="filter-sort-select">
+                  <option value="">Сортировка: по умолчанию</option>
+                  <option value="price-asc">Цена: сначала дешевле</option>
+                  <option value="price-desc">Цена: сначала дороже</option>
+                  <option value="name-asc">Название: А → Я</option>
+                </select>
+              </div>
             </div>
             <button id="reset-filters" class="btn-secondary filters-reset">Сбросить фильтры</button>
             <button id="sync-catalog-btn" class="btn-secondary filters-reset" title="Обновить каталог из Google Таблицы">

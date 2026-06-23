@@ -25,9 +25,10 @@ function doGet(e) {
 
   let result
   try {
-    if      (action === 'getProducts')    result = actionGetProducts(email)
-    else if (action === 'checkAccess')    result = actionCheckAccess(email)
+    if      (action === 'getProducts')     result = actionGetProducts(email)
+    else if (action === 'checkAccess')     result = actionCheckAccess(email)
     else if (action === 'getOrderHistory') result = actionGetOrderHistory(email)
+    else if (action === 'getClientProfile') result = actionGetClientProfile(email)
     else result = { error: 'Неизвестное действие: ' + action }
   } catch (err) {
     result = { error: err.message }
@@ -86,6 +87,36 @@ function actionGetProducts(email) {
     hasAccess:    clientInfo.active,
     canSeePrices: clientInfo.can_see_prices,
   }
+}
+
+// ── Профиль клиента (компания, телефон, адрес) ────────────────────
+function actionGetClientProfile(email) {
+  if (!email) return { profile: null }
+  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID)
+  const sheet = ss.getSheetByName(SHEET_CLIENTS)
+  if (!sheet) return { profile: null }
+
+  const rows    = sheet.getDataRange().getValues()
+  const headers = rows[0].map(function(h) { return String(h).trim().toLowerCase() })
+  const eIdx    = headers.indexOf('email')
+  const coIdx   = headers.indexOf('company')
+  const phIdx   = headers.indexOf('phone')
+  const adIdx   = headers.indexOf('address')
+
+  if (eIdx < 0) return { profile: null }
+
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][eIdx] || '').toLowerCase().trim() === email) {
+      return {
+        profile: {
+          company: coIdx >= 0 ? String(rows[i][coIdx] || '') : '',
+          phone:   phIdx >= 0 ? String(rows[i][phIdx] || '') : '',
+          address: adIdx >= 0 ? String(rows[i][adIdx] || '') : '',
+        }
+      }
+    }
+  }
+  return { profile: null }
 }
 
 // ── Проверка доступа ──────────────────────────────────────────────
@@ -198,7 +229,7 @@ function actionSaveOrder(body) {
   if (!sheet) {
     sheet = ss.insertSheet(SHEET_ORDERS)
     sheet.appendRow([
-      'order_id', 'date', 'email', 'company', 'client_name', 'phone', 'comment',
+      'order_id', 'date', 'email', 'company', 'phone', 'address', 'comment',
       'product_id', 'product_name', 'socket', 'unit', 'qty', 'price', 'status'
     ])
     // Заголовки — жирные
@@ -210,8 +241,8 @@ function actionSaveOrder(body) {
   const date      = body.date     || new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' })
   const email     = (body.email   || '').toLowerCase().trim()
   const company   = body.company  || ''
-  const name      = body.name     || ''
   const phone     = body.phone    || ''
+  const address   = body.address  || ''
   const comment   = body.comment  || ''
   const items     = Array.isArray(body.items) ? body.items : []
 
@@ -224,8 +255,8 @@ function actionSaveOrder(body) {
       date,
       email,
       company,
-      name,
       phone,
+      address,
       comment,
       String(item.id   || ''),
       String(item.name || ''),
@@ -243,8 +274,8 @@ function actionSaveOrder(body) {
   date:     date,
   email:    email,
   company:  company,
-  name:     name,
   phone:    phone,
+  address:  address,
   comment:  comment,
   items:    items
   };
@@ -305,8 +336,8 @@ function sendOrderNotification(data) {
     lines.push('Дата:        ' + data.date)
     lines.push('Email:       ' + data.email)
     lines.push('Компания:    ' + (data.company  || '—'))
-    lines.push('Контакт:     ' + (data.name     || '—'))
     lines.push('Телефон:     ' + (data.phone    || '—'))
+    lines.push('Адрес:       ' + (data.address  || '—'))
     if (data.comment) lines.push('Комментарий: ' + data.comment)
     lines.push('─────────────────────────────────────────────')
     lines.push('СОСТАВ ЗАКАЗА:')
@@ -369,8 +400,8 @@ function sendOrderNotification(data) {
       '<tr><td style="color:#888;padding:4px 16px 4px 0;white-space:nowrap">Дата</td><td><b>' + data.date + '</b></td></tr>' +
       '<tr><td style="color:#888;padding:4px 16px 4px 0">Email</td><td>' + data.email + '</td></tr>' +
       '<tr><td style="color:#888;padding:4px 16px 4px 0">Компания</td><td>' + (data.company || '—') + '</td></tr>' +
-      '<tr><td style="color:#888;padding:4px 16px 4px 0">Контакт</td><td>' + (data.name || '—') + '</td></tr>' +
       '<tr><td style="color:#888;padding:4px 16px 4px 0">Телефон</td><td>' + (data.phone || '—') + '</td></tr>' +
+      '<tr><td style="color:#888;padding:4px 16px 4px 0">Адрес магазина</td><td>' + (data.address || '—') + '</td></tr>' +
       (data.comment ? '<tr><td style="color:#888;padding:4px 16px 4px 0">Комментарий</td><td>' + data.comment + '</td></tr>' : '')
 
     var htmlBody =

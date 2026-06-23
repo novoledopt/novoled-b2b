@@ -18,10 +18,22 @@
         </a>
         <nav class="main-nav">
           <a href="index.html" class="nav-link">Каталог</a>
-          <a href="cart.html" class="nav-link nav-link-active">
-            Корзина
-            <span id="cart-count-badge" class="cart-count-badge">0</span>
-          </a>
+          <div class="cart-preview-wrap" id="cart-preview-wrap">
+            <a href="cart.html" class="nav-link nav-link-active" id="cart-preview-trigger">
+              Корзина
+              <span id="cart-count-badge" class="cart-count-badge">0</span>
+            </a>
+            <div class="cart-preview-dropdown" id="cart-preview-dropdown" hidden>
+              <div class="cart-preview-items" id="cart-preview-items"></div>
+              <div class="cart-preview-footer">
+                <div class="cart-preview-total">
+                  <span>Итого:</span>
+                  <span id="cart-preview-total-val">—</span>
+                </div>
+                <a href="cart.html" class="btn-primary cart-preview-btn">Оформить заказ</a>
+              </div>
+            </div>
+          </div>
           <div id="header-auth" class="header-auth-area">
             <a href="login.html" class="auth-login-link">Войти</a>
           </div>
@@ -57,7 +69,7 @@
             <div class="cart-summary">
               <div>
                 <div class="cart-summary-row">
-                  <span>Всего позицийй</span>
+                  <span>Всего позиций</span>
                   <span id="cart-items-count">0</span>
                 </div>
                 <div class="cart-summary-row">
@@ -72,30 +84,33 @@
             <h2>Выслать запрос</h2>
             <p class="muted">Заполните данные и мы свяжемся с вами для обсуждения деталей заказа</p>
 
+            <div id="profile-autofill-notice" style="display:none;margin-bottom:10px;font-size:13px;color:var(--accent)">
+              ✓ Данные заполнены из вашего профиля
+            </div>
             <form id="request-form" class="request-form">
               <div class="form-row">
                 <label>
-                  Название компании
-                  <input type="text" name="company" required />
+                  Название компании / ИП / ООО
+                  <input type="text" name="company" id="field-company" placeholder="ИП Иванов И.И. или ООО Свет" required />
                 </label>
                 <label>
-                  Контактное лицо
-                  <input type="text" name="name" required />
+                  Электронная почта
+                  <input type="email" name="email" id="field-email" required />
                 </label>
               </div>
               <div class="form-row">
                 <label>
                   Телефонный номер
-                  <input type="tel" name="phone" required />
+                  <input type="tel" name="phone" id="field-phone" required />
                 </label>
                 <label>
-                  Электронная почта
-                  <input type="email" name="email" required />
+                  Адрес магазина / точки
+                  <input type="text" name="address" id="field-address" placeholder="г. Симферополь, ул. Ленина, 5" />
                 </label>
               </div>
               <label>
                 Комментарий
-                <textarea name="comment" rows="3" placeholder="Комментарий..."></textarea>
+                <textarea name="comment" rows="3" placeholder="Комментарий к заказу..."></textarea>
               </label>
               <button type="submit" class="btn-primary">Сформировать запрос (без оплаты)</button>
               <div id="request-result" class="muted"></div>

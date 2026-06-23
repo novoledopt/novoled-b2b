@@ -45,18 +45,32 @@ card.innerHTML='<div class="product-thumb">'+'<img src="'+imgSrc+'" alt="'+produ
 (product.series?'<span class="badge">'+product.series+'</span>':'')+
 (product.socket?'<span class="badge">'+product.socket+'</span>':'')+
 (specsRight?'<span class="badge">'+specsRight+'</span>':'')+'</div>'+'<div class="product-title">'+product.name+'</div>'+'<div class="product-sku">Арт.: '+product.id+'</div>'+'<div class="product-price">'+'<span class="price-value" style="display:'+(canSee?'':'none')+'">'+priceStr+'</span>'+'<span class="price-locked" style="display:'+(canSee?'none':'')+';font-size:13px;color:var(--text-muted)">Цена после входа</span>'+'</div>'+
-(product.unit?'<div class="product-unit">Ед.: '+product.unit+'</div>':'')+'<div class="product-stock-row">'+'<span class="stock-indicator '+(product.in_stock?'stock-available':'stock-pending')+'"></span>'+'<span class="'+(product.in_stock?'stock-label-available':'stock-label-pending')+'">'+
-(product.in_stock?'В наличии':'Ожидается поставка')+'</span>'+'</div>'+'</div>'+'<div class="product-bottom"><div class="product-actions">'+'<button class="btn-add-to-cart" data-add-to-cart="'+product.id+'" '+
-(product.in_stock?'':'disabled')+' type="button">'+'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none">'+'<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>'+'<path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>'+'</svg>'+
+(product.unit?'<div class="product-unit">Ед.: '+product.unit+'</div>':'')+'<div class="product-stock-row">'+'<span class="stock-indicator '+
+(product.in_stock?'stock-available':'stock-pending')+'"></span>'+'<span class="'+(product.in_stock?'stock-label-available':'stock-label-pending')+'">'+
+(product.in_stock?'В наличии':'Ожидается поставка')+'</span>'+'</div>'+'</div>'+'<div class="product-bottom"><div class="product-actions" style="flex-direction:column;gap:8px">'+
+(product.in_stock?'<div class="card-qty-row"><button class="qty-btn qty-btn-sm" data-card-minus="'+product.id+'" type="button" aria-label="Меньше"><span class="qty-icon">&#8722;</span></button><input class="card-qty-input" id="qty-'+product.id+'" type="number" value="1" min="1" max="999" aria-label="Количество"><button class="qty-btn qty-btn-sm" data-card-plus="'+product.id+'" type="button" aria-label="Больше"><span class="qty-icon">+</span></button></div>':'')+
+'<button class="btn-add-to-cart" data-add-to-cart="'+product.id+'" '+
+(product.in_stock?'':'disabled')+' type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>'+
 (product.in_stock?'В корзину':'Ожидается')+'</button>'+'</div></div>'
 const addBtn=card.querySelector('[data-add-to-cart]')
+const qtyInput=card.querySelector('#qty-'+product.id)
+function getCardQty(){const v=parseInt(qtyInput?qtyInput.value:1);return isNaN(v)||v<1?1:Math.min(v,999)}
+card.addEventListener('click',function(e){
+  const minus=e.target.closest('[data-card-minus]')
+  const plus=e.target.closest('[data-card-plus]')
+  if(minus){e.stopPropagation();if(qtyInput)qtyInput.value=String(Math.max(1,getCardQty()-1));return}
+  if(plus){e.stopPropagation();if(qtyInput)qtyInput.value=String(Math.min(999,getCardQty()+1));return}
+})
+if(qtyInput){qtyInput.addEventListener('click',function(e){e.stopPropagation()})
+qtyInput.addEventListener('input',function(){if(parseInt(this.value)<1||isNaN(parseInt(this.value)))this.value='1'})}
 if(addBtn){addBtn.addEventListener('click',function(e){e.stopPropagation()
 if(!product.in_stock)return
-if(window.Novoled&&window.Novoled.addToCart){window.Novoled.addToCart(product,1)}
+const qty=getCardQty()
+if(window.Novoled&&window.Novoled.addToCart){window.Novoled.addToCart(product,qty)}
 addBtn.classList.remove('btn-pulse')
 void addBtn.offsetWidth
 addBtn.classList.add('btn-pulse')
-if(typeof showToast==='function')showToast('Добавлено в корзину')})}
+if(typeof showToast==='function')showToast('Добавлено: '+qty+' шт.')})}
 return card}
 function renderProductsGrid(products){const wrapper=document.createElement('div')
 wrapper.className='products-grid'
@@ -64,12 +78,17 @@ if(!products.length){wrapper.innerHTML='<div class="muted">Нет товаров
 return wrapper}
 products.forEach(function(p){wrapper.appendChild(createProductCard(p))})
 return wrapper}
-function applyFilters(products,searchTerm,seriesSet,socketSet){const term=str(searchTerm).trim().toLowerCase()
-return products.filter(function(p){if(seriesSet.size&&!seriesSet.has(p.series))return false
-if(socketSet.size&&!socketSet.has(p.socket))return false
-if(!term)return true
-const haystack=[p.name,p.category,p.subcategory,p.series,p.socket,p.id].map(str).join(' ').toLowerCase()
-return haystack.includes(term)})}
+function applyFilters(products,searchTerm,seriesSet,socketSet,onlyInStock,sortBy){const term=str(searchTerm).trim().toLowerCase()
+  let result=products.filter(function(p){if(seriesSet.size&&!seriesSet.has(p.series))return false
+  if(socketSet.size&&!socketSet.has(p.socket))return false
+  if(onlyInStock&&!p.in_stock)return false
+  if(!term)return true
+  const haystack=[p.name,p.category,p.subcategory,p.series,p.socket,p.id].map(str).join(' ').toLowerCase()
+  return haystack.includes(term)})
+  if(sortBy==='price-asc')result=result.slice().sort(function(a,b){return(a.price||0)-(b.price||0)})
+  else if(sortBy==='price-desc')result=result.slice().sort(function(a,b){return(b.price||0)-(a.price||0)})
+  else if(sortBy==='name-asc')result=result.slice().sort(function(a,b){return safeLocale(a.name,b.name)})
+  return result}
 const CATEGORY_ORDER=['LED Группа','Батарейки','Брелока/Заглушки','Лампы Галогенные','Наконечники KBT','НИВА','Разное','Распродажа','Щетки Стеклоочестителя',]
 function sortByCategoryOrder(a,b){const ia=CATEGORY_ORDER.indexOf(a)
 const ib=CATEGORY_ORDER.indexOf(b)
@@ -153,6 +172,8 @@ if(!treeContainer)return
 let products=[]
 const selectedSeries=new Set()
 const selectedSockets=new Set()
+const onlyInStock=false
+const sortBy=''
 try{const raw=await window.Novoled.api.getAllProducts()
 products=raw.map(normalizeProduct)
 if(loader)loader.style.display='none'
@@ -166,7 +187,7 @@ const seriesValues=Array.from(new Set(products.map(function(p){return p.series})
 const socketValues=Array.from(new Set(products.map(function(p){return p.socket}).filter(Boolean))).sort(safeLocale)
 renderFilterChips(seriesValues,seriesFilterList,selectedSeries)
 renderFilterChips(socketValues,socketFilterList,selectedSockets)
-function render(){const filtered=applyFilters(products,searchInput?searchInput.value:'',selectedSeries,selectedSockets)
+function render(){const filtered=applyFilters(products,searchInput?searchInput.value:'',selectedSeries,selectedSockets,onlyInStock,sortBy)
 const tree=buildCategoryTree(filtered)
 treeContainer.innerHTML=''
 if(!filtered.length){treeContainer.innerHTML='<div class="muted">По выбранным фильтрам товары не найдены.</div>'}else{renderCategoryTree(tree,treeContainer)}
@@ -190,12 +211,23 @@ if(selectedSockets.has(val))selectedSockets.delete(val)
 else selectedSockets.add(val)
 renderFilterChips(socketValues,socketFilterList,selectedSockets)
 render()})}
-if(resetBtn){resetBtn.addEventListener('click',function(){if(searchInput)searchInput.value=''
-selectedSeries.clear()
-selectedSockets.clear()
-renderFilterChips(seriesValues,seriesFilterList,selectedSeries)
-renderFilterChips(socketValues,socketFilterList,selectedSockets)
+const inStockBtn=document.getElementById('filter-in-stock')
+const sortSelect=document.getElementById('sort-select')
+if(inStockBtn){inStockBtn.addEventListener('click',function(){onlyInStock=!onlyInStock
+inStockBtn.classList.toggle('filter-chip-active',onlyInStock)
 render()})}
+if(sortSelect){sortSelect.addEventListener('change',function(){sortBy=sortSelect.value
+render()})}
+if(resetBtn){resetBtn.addEventListener('click',function(){if(searchInput)searchInput.value=''
+  selectedSeries.clear()
+  selectedSockets.clear()
+  onlyInStock=false
+  sortBy=''
+  if(inStockBtn)inStockBtn.classList.remove('filter-chip-active')
+  if(sortSelect)sortSelect.value=''
+  renderFilterChips(seriesValues,seriesFilterList,selectedSeries)
+  renderFilterChips(socketValues,socketFilterList,selectedSockets)
+  render()})}
 render()
 var savedState=loadCatalogState()
 if(savedState){restoreCatalogState(savedState)}

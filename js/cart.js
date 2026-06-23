@@ -6,6 +6,50 @@ const parsed=JSON.parse(raw)
 return Array.isArray(parsed)?parsed:[]}catch{return[]}}
 function writeCart(items){const clean=items.map(function(i){return{id:String(i.id),name:i.name||'',socket:i.socket||'',unit:i.unit||'',qty:Number(i.qty)||1}})
 localStorage.setItem(CART_KEY,JSON.stringify(clean))}
+// ── Профиль клиента ───────────────────────────────────────────────
+const _LS_PROFILE='novoled_client_profile_v1'
+function saveLocalProfile(data){try{localStorage.setItem(_LS_PROFILE,JSON.stringify(data))}catch(e){}}
+function loadLocalProfile(){try{const raw=localStorage.getItem(_LS_PROFILE);return raw?JSON.parse(raw):null}catch(e){return null}}
+
+async function fetchClientProfile(email){
+  if(!email)return null
+  try{const url=getAppsScriptUrl()
+  if(!url||url.includes('ВСТАВЬТЕ'))return null
+  const res=await fetch(url+'?action=getClientProfile&email='+encodeURIComponent(email))
+  const data=await res.json()
+  if(data&&data.profile){saveLocalProfile(data.profile);return data.profile}
+  }catch(e){console.warn('Не удалось загрузить профиль:',e)}
+  return null
+}
+
+function getClientProfile(){return loadLocalProfile()}
+
+function prefillOrderForm(){
+  const email=(typeof getUserEmail==='function')?getUserEmail():''
+  const profile=getClientProfile()
+  const emailField=document.getElementById('field-email')
+  const companyField=document.getElementById('field-company')
+  const phoneField=document.getElementById('field-phone')
+  const addressField=document.getElementById('field-address')
+  const notice=document.getElementById('profile-autofill-notice')
+  let filled=false
+  if(emailField&&email){emailField.value=email;filled=true}
+  if(profile){
+    if(companyField&&profile.company){companyField.value=profile.company;filled=true}
+    if(phoneField&&profile.phone){phoneField.value=profile.phone;filled=true}
+    if(addressField&&profile.address){addressField.value=profile.address;filled=true}
+  }
+  if(filled&&notice)notice.style.display='block'
+  // Подгружаем актуальный профиль из таблицы в фоне
+  if(email){fetchClientProfile(email).then(function(fresh){
+    if(!fresh)return
+    if(companyField&&fresh.company)companyField.value=fresh.company
+    if(phoneField&&fresh.phone)phoneField.value=fresh.phone
+    if(addressField&&fresh.address)addressField.value=fresh.address
+    if((fresh.company||fresh.phone||fresh.address)&&notice)notice.style.display='block'
+  })}
+}
+
 var _priceCache=null
 async function loadPriceCache(){if(_priceCache)return _priceCache
 _priceCache={}
@@ -133,6 +177,7 @@ if(reorderBtn){const id=reorderBtn.getAttribute('data-order-id')
 const order=history.find(function(o){return String(o.id)===String(id)})
 if(order)reorderFromHistory(order)}})}
 function initCartPage(){renderCartPage()
+prefillOrderForm()
 const form=document.getElementById('request-form')
 const resultEl=document.getElementById('request-result')
 if(!form||!resultEl)return;(function(){var topBtn=document.createElement('button')
@@ -156,11 +201,13 @@ cartItems.forEach(function(i){const qty=Number(i.qty)||0
 const price=canSee?(getPrice(i.id)||0):0
 totalSum+=qty*price
 totalItems+=qty})
-const orderData={company:formData.get('company')||'',name:formData.get('name')||'',phone:formData.get('phone')||'',email:formData.get('email')||'',comment:formData.get('comment')||'',}
+const orderData={company:formData.get('company')||'',phone:formData.get('phone')||'',email:formData.get('email')||'',address:formData.get('address')||'',comment:formData.get('comment')||'',}
+// Сохраняем профиль локально для автозаполнения следующего заказа
+saveLocalProfile({company:orderData.company,phone:orderData.phone,address:orderData.address})
 const orderId=String(Date.now())
 const orderDate=new Date().toLocaleString('ru-RU',{timeZone:'Europe/Moscow'})
 const orderItems=cartItems.map(function(i){return{id:i.id,name:i.name,socket:i.socket||'',unit:i.unit||'',qty:Number(i.qty)||0,price:canSee?(getPrice(i.id)||null):null,}})
-const orderPayload={order_id:orderId,date:orderDate,email:orderData.email||(typeof getUserEmail==='function'?getUserEmail():''),company:orderData.company||'',name:orderData.name||'',phone:orderData.phone||'',comment:orderData.comment||'',items:orderItems,}
+const orderPayload={order_id:orderId,date:orderDate,email:orderData.email||(typeof getUserEmail==='function'?getUserEmail():''),company:orderData.company||'',phone:orderData.phone||'',address:orderData.address||'',comment:orderData.comment||'',items:orderItems,}
 const scriptUrl=getAppsScriptUrl()
 const submitBtn=form.querySelector('[type="submit"]')
 if(submitBtn)submitBtn.disabled=true
@@ -175,8 +222,62 @@ clearCart()
 await renderCartPage()}catch(err){console.error('Ошибка отправки:',err)
 resultEl.textContent='Ошибка отправки. Пожалуйста, свяжитесь с нами напрямую.'
 resultEl.style.color='var(--danger)'}finally{if(submitBtn)submitBtn.disabled=false}})}
+// ── Превью-корзина в шапке ────────────────────────────────────────
+function renderCartPreview(){
+  const wrap=document.getElementById('cart-preview-wrap')
+  const dropdown=document.getElementById('cart-preview-dropdown')
+  const itemsEl=document.getElementById('cart-preview-items')
+  const totalEl=document.getElementById('cart-preview-total-val')
+  if(!wrap||!dropdown||!itemsEl)return
+  const items=readCart()
+  if(!items.length){dropdown.hidden=true;return}
+  const canSee=(typeof canUserSeePrices==='function')?canUserSeePrices():false
+  const preview=items.slice(0,5)
+  let totalSum=0
+  let allPriced=true
+  itemsEl.innerHTML=preview.map(function(item){
+    const price=canSee?getPrice(item.id):null
+    const qty=Number(item.qty)||1
+    if(price){totalSum+=price*qty}else{allPriced=false}
+    const priceStr=price?(price.toFixed(0)+' ₽ × '+qty):'× '+qty
+    return'<div class="cart-preview-item">'+
+      '<div class="cart-preview-item-name">'+item.name+'</div>'+
+      '<div class="cart-preview-item-qty">'+priceStr+'</div>'+
+      '</div>'
+  }).join('')+(items.length>5?'<div class="cart-preview-more">+ещё '+(items.length-5)+' позиций</div>':'')
+  if(totalEl)totalEl.textContent=(canSee&&allPriced&&totalSum>0)?totalSum.toFixed(0)+' ₽':'—'
+}
+
+function initCartPreview(){
+  const wrap=document.getElementById('cart-preview-wrap')
+  const trigger=document.getElementById('cart-preview-trigger')
+  const dropdown=document.getElementById('cart-preview-dropdown')
+  if(!wrap||!trigger||!dropdown)return
+  let hideTimer=null
+  function showPreview(){
+    if(!readCart().length)return
+    clearTimeout(hideTimer)
+    renderCartPreview()
+    dropdown.hidden=false
+  }
+  function scheduleHide(){hideTimer=setTimeout(function(){dropdown.hidden=true},200)}
+  // Десктоп: hover
+  wrap.addEventListener('mouseenter',showPreview)
+  wrap.addEventListener('mouseleave',scheduleHide)
+  dropdown.addEventListener('mouseenter',function(){clearTimeout(hideTimer)})
+  dropdown.addEventListener('mouseleave',scheduleHide)
+  // Мобайл: tap на бейдж
+  trigger.addEventListener('click',function(e){
+    if(window.innerWidth>768)return// на десктопе ссылка работает как обычно
+    if(dropdown.hidden&&readCart().length){e.preventDefault();showPreview()}else{dropdown.hidden=true}
+  })
+  document.addEventListener('click',function(e){if(!wrap.contains(e.target))dropdown.hidden=true})
+}
+
 window.Novoled=window.Novoled||{}
 window.Novoled.addToCart=addToCart
 window.Novoled.readCart=readCart
 window.Novoled.initCartBadge=updateCartBadge
-window.Novoled.initCartPage=initCartPage})()
+window.Novoled.initCartPage=initCartPage
+window.Novoled.initCartPreview=initCartPreview
+window.Novoled.renderCartPreview=renderCartPreview})()

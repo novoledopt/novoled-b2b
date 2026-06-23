@@ -80,3 +80,17 @@
 
 /* ── Автозаполнение формы заказа ── */
 #profile-autofill-notice{padding:8px 12px;background:rgba(77,242,155,0.08);border:1px solid rgba(77,242,155,0.25);border-radius:var(--radius-sm)}
+
+@media (max-width:640px){
+  .filters-group--controls .filter-chips{
+    flex-direction:column;
+    gap:6px;
+  }
+  .filter-sort-select{
+    width:100%;
+  }
+  .filters-reset{
+    align-self:flex-start;
+    margin-top:4px;
+  }
+}

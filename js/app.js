@@ -39,4 +39,5 @@ if(typeof showToast==='function')showToast('✓ Каталог обновлён 
 if(window.Novoled.initCatalogPage){document.getElementById('catalog-tree').innerHTML=''
 await window.Novoled.initCatalogPage()}}catch(err){console.error('Sync error:',err)
 if(typeof showToast==='function')showToast('Ошибка обновления: '+err.message)}finally{syncBtn.disabled=false
-if(icon)icon.style.animation=''}})})document.addEventListener('DOMContentLoaded',function(){if(window.Novoled&&window.Novoled.initCartPreview)window.Novoled.initCartPreview()})
+if(icon)icon.style.animation=''}})})
+document.addEventListener('DOMContentLoaded',function(){if(window.Novoled&&window.Novoled.initCartPreview)window.Novoled.initCartPreview()})

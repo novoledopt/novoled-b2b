@@ -172,8 +172,8 @@ if(!treeContainer)return
 let products=[]
 const selectedSeries=new Set()
 const selectedSockets=new Set()
-const onlyInStock=false
-const sortBy=''
+let onlyInStock=false
+let sortBy=''
 try{const raw=await window.Novoled.api.getAllProducts()
 products=raw.map(normalizeProduct)
 if(loader)loader.style.display='none'

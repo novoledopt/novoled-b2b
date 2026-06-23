@@ -280,4 +280,5 @@ window.Novoled.readCart=readCart
 window.Novoled.initCartBadge=updateCartBadge
 window.Novoled.initCartPage=initCartPage
 window.Novoled.initCartPreview=initCartPreview
-window.Novoled.renderCartPreview=renderCartPreview})()
+window.Novoled.renderCartPreview=renderCartPreview
+}())

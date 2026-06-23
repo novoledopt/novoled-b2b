@@ -232,6 +232,7 @@
     const items=readCart()
     if(!items.length){dropdown.hidden=true;return}
     const canSee=(typeof canUserSeePrices==='function')?canUserSeePrices():false
+    if(canSee&&!_priceCache){loadPriceCache().then(function(){renderCartPreview()});return}
     const preview=items.slice(0,5)
     let totalSum=0
     let allPriced=true

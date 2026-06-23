@@ -91,7 +91,17 @@
               <input type="search" id="search-input" placeholder="Поиск по названию, категории, цоколю…" autocomplete="off" />
             </div>
           </div>
-          <div class="filters-bar">
+          <!-- Кнопка-тоггл фильтров (видна только на мобиле) -->
+          <div class="filters-bar-wrap">
+            <button class="filters-toggle-btn" id="filters-toggle-btn" aria-expanded="false">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+              Фильтры
+              <span class="filters-toggle-count" id="filters-active-count" hidden>0</span>
+              <svg class="filters-toggle-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+          </div>
+
+          <div class="filters-bar" id="filters-bar">
             <div class="filters-group">
               <div class="filters-title">Серия</div>
               <div id="series-filter-list" class="filter-chips"></div>
@@ -361,5 +371,41 @@
         <polyline points="18 15 12 9 6 15"/>
       </svg>
     </button>
-  </body>
+  
+<script>
+;(function(){
+  var btn=document.getElementById('filters-toggle-btn')
+  var bar=document.getElementById('filters-bar')
+  if(!btn||!bar)return
+  // Создаём inner-обёртку для анимации
+  if(!bar.querySelector('.filters-bar-inner')){
+    var inner=document.createElement('div')
+    inner.className='filters-bar-inner'
+    while(bar.firstChild)inner.appendChild(bar.firstChild)
+    bar.appendChild(inner)
+  }
+  btn.addEventListener('click',function(){
+    var open=bar.classList.toggle('filters-open')
+    btn.setAttribute('aria-expanded',String(open))
+  })
+  function updateCount(){
+    if(window.innerWidth>640)return
+    var count=0
+    document.querySelectorAll('.filter-chip-active').forEach(function(){count++})
+    var el=document.getElementById('filters-active-count')
+    if(!el)return
+    el.textContent=String(count)
+    el.hidden=count===0
+  }
+  document.addEventListener('click',function(e){
+    if(e.target.closest('.filter-chip')||e.target.closest('#filter-in-stock')||e.target.closest('#sort-select')||e.target.closest('#reset-filters'))
+      setTimeout(updateCount,50)
+  })
+  window.addEventListener('resize',function(){
+    if(window.innerWidth>640){bar.classList.remove('filters-open');btn.setAttribute('aria-expanded','false')}
+  })
+})()
+</script>
+
+</body>
 </html>

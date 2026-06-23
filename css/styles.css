@@ -94,3 +94,66 @@
     margin-top:4px;
   }
 }
+
+/* ── Кнопка «Фильтры» — мобильный тоггл ── */
+.filters-bar-wrap{display:none}
+.filters-toggle-btn{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500;padding:7px 12px;border-radius:var(--radius-sm);border:1px solid rgba(255,255,255,0.16);background:rgba(5,8,16,0.9);color:var(--text-muted);cursor:pointer;transition:border-color .18s,color .18s;margin-top:10px}
+.filters-toggle-btn:hover{border-color:rgba(77,242,155,0.5);color:var(--accent)}
+.filters-toggle-btn[aria-expanded="true"]{border-color:rgba(77,242,155,0.6);color:var(--accent);background:rgba(77,242,155,0.07)}
+.filters-toggle-arrow{transition:transform .22s ease;flex-shrink:0}
+.filters-toggle-btn[aria-expanded="true"] .filters-toggle-arrow{transform:rotate(180deg)}
+.filters-toggle-count{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;border-radius:999px;font-size:11px;font-weight:700;background:var(--accent);color:#000;padding:0 4px}
+
+@media (max-width:640px){
+  .filters-bar-wrap{display:block}
+  .filters-bar{
+    display:grid;
+    grid-template-rows:0fr;
+    overflow:hidden;
+    transition:grid-template-rows .28s ease;
+    margin-top:6px;
+    border:none;
+    background:none;
+    padding:0;
+  }
+  .filters-bar>*{min-height:0}
+  .filters-bar.filters-open{grid-template-rows:1fr}
+  .filters-bar-inner{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    padding:12px;
+    border-radius:var(--radius-lg);
+    border:1px solid rgba(255,255,255,0.06);
+    background:linear-gradient(135deg,#070914,#090d19);
+  }
+  .filters-group{flex:none;width:100%}
+  .filter-chips{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:2px}
+  .filter-chips::-webkit-scrollbar{display:none}
+  .filters-group--controls .filter-chips{flex-wrap:wrap;gap:8px}
+  .filter-sort-select{width:100%}
+  .filters-reset{width:100%;justify-content:center}
+  /* Кнопка В корзину — крупнее */
+  .btn-add-to-cart{padding:13px 16px;font-size:15px}
+  .card-qty-input{width:52px;height:30px;font-size:15px}
+  .qty-btn-sm{width:30px;height:30px;font-size:18px}
+  /* Корзина — карточки вместо таблицы */
+  .cart-table-wrapper{overflow-x:unset}
+  .cart-table thead{display:none}
+  .cart-table,.cart-table tbody,.cart-table tr{display:block;width:100%}
+  .cart-table td{display:none}
+  .cart-table tr{background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-md);margin-bottom:10px;padding:14px 14px 12px;position:relative}
+  .cart-table tr td:nth-child(1),.cart-table tr td:nth-child(3),.cart-table tr td:nth-child(4),.cart-table tr td:nth-child(5),.cart-table tr td:nth-child(6){display:block}
+  .cart-table tr td:nth-child(1){padding-right:36px;padding-bottom:10px;border-bottom:1px solid var(--border-subtle);margin-bottom:10px}
+  .cart-table tr td:nth-child(3){display:inline-block;vertical-align:middle}
+  .cart-table tr td:nth-child(4){display:inline-block;vertical-align:middle;margin-left:10px;color:var(--text-muted);font-size:13px}
+  .cart-table tr td:nth-child(4)::before{content:'по '}
+  .cart-table tr td:nth-child(5){display:inline-block;vertical-align:middle;margin-left:8px;font-weight:700;color:var(--accent);font-size:15px}
+  .cart-table tr td:nth-child(5)::before{content:'= '}
+  .cart-table tr td:nth-child(6){position:absolute;top:12px;right:12px;display:block}
+  .cart-item-name{font-size:14px}
+  .cart-item-meta{font-size:12px;margin-top:3px}
+  .qty-stepper{gap:6px}
+  .qty-btn{width:28px;height:28px}
+  .cart-summary{justify-content:flex-start;margin-top:8px}
+}

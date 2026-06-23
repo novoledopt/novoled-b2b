@@ -187,7 +187,7 @@ topBtn.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" st
 document.body.appendChild(topBtn)
 topBtn.addEventListener('click',function(){window.scrollTo({top:0,behavior:'smooth'})})
 window.addEventListener('scroll',function(){if(window.scrollY>300)topBtn.classList.add('visible')
-else topBtn.classList.remove('visible')},{passive:true})})()
+else topBtn.classList.remove('visible')},{passive:true})}
 form.addEventListener('submit',async function(e){e.preventDefault()
 const formData=new FormData(form)
 const cartItems=readCart()

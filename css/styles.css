@@ -130,7 +130,7 @@
   }
   .filters-bar-inner{overflow:visible}
   .filters-group{flex:none;width:100%;min-width:0}
-  .filter-chips{display:flex;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:4px;gap:6px;width:100%}
+  .filter-chips{display:flex;flex-wrap:wrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:4px;gap:6px;width:100%}
   .filter-chips::-webkit-scrollbar{display:none}
   .filters-group--controls .filter-chips{flex-wrap:wrap;overflow-x:unset;gap:8px}
   .filter-sort-select{width:100%;box-sizing:border-box}

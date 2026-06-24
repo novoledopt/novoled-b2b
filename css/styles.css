@@ -110,14 +110,15 @@
     display:grid;
     grid-template-rows:0fr;
     overflow:hidden;
-    transition:grid-template-rows .28s ease;
+    transition:grid-template-rows .35s ease;
     margin-top:6px;
     border:none;
     background:none;
     padding:0;
   }
-  .filters-bar>*{min-height:0}
+  .filters-bar>*{min-height:0;overflow:hidden}
   .filters-bar.filters-open{grid-template-rows:1fr}
+  .filters-bar.filters-open>*{overflow:visible}
   .filters-bar-inner{
     display:flex;
     flex-direction:column;
@@ -127,12 +128,13 @@
     border:1px solid rgba(255,255,255,0.06);
     background:linear-gradient(135deg,#070914,#090d19);
   }
-  .filters-group{flex:none;width:100%}
-  .filter-chips{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:2px}
+  .filters-bar-inner{overflow:visible}
+  .filters-group{flex:none;width:100%;min-width:0}
+  .filter-chips{display:flex;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:4px;gap:6px;width:100%}
   .filter-chips::-webkit-scrollbar{display:none}
-  .filters-group--controls .filter-chips{flex-wrap:wrap;gap:8px}
-  .filter-sort-select{width:100%}
-  .filters-reset{width:100%;justify-content:center}
+  .filters-group--controls .filter-chips{flex-wrap:wrap;overflow-x:unset;gap:8px}
+  .filter-sort-select{width:100%;box-sizing:border-box}
+  .filters-reset{width:100%;justify-content:center;box-sizing:border-box}
   /* Кнопка В корзину — крупнее */
   .btn-add-to-cart{padding:13px 16px;font-size:15px}
   .card-qty-input{width:52px;height:30px;font-size:15px}
